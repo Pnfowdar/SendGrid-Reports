@@ -355,7 +355,7 @@ interface SequenceBarChartProps {
 function SequenceBarChart({ data, previous, maxCount, onSelect }: SequenceBarChartProps) {
   const chartHeight = 240;
   const barWidth = 36;
-  const barGap = 24;
+  const barGap = 36;
   const chartPadding = 32;
   const totalWidth = chartPadding * 2 + data.length * barWidth + Math.max(0, data.length - 1) * barGap;
 
@@ -436,6 +436,19 @@ function SequenceBarChart({ data, previous, maxCount, onSelect }: SequenceBarCha
                 fill="#94a3b8"
               >
                 #{metric.sequenceNumber}
+              </text>
+              <text
+                x={barWidth / 2}
+                y={chartHeight + 34}
+                textAnchor="middle"
+                fontSize={11}
+                fill="#38bdf8"
+                fontWeight={600}
+              >
+                <tspan x={barWidth / 2}>Open: {metric.openRate.toFixed(1)}%</tspan>
+                <tspan x={barWidth / 2} dy={14} fill="#f472b6">
+                  Click: {metric.clickRate.toFixed(1)}%
+                </tspan>
               </text>
             </g>
           );
