@@ -437,26 +437,6 @@ function SequenceBarChart({ data, previous, maxCount, onSelect }: SequenceBarCha
               >
                 #{metric.sequenceNumber}
               </text>
-              <text
-                x={barWidth / 2}
-                y={chartHeight + 34}
-                textAnchor="middle"
-                fontSize={11}
-                fill="#38bdf8"
-                fontWeight={600}
-              >
-                {metric.openRate.toFixed(1)}% open
-              </text>
-              <text
-                x={barWidth / 2}
-                y={chartHeight + 48}
-                textAnchor="middle"
-                fontSize={11}
-                fill="#f472b6"
-                fontWeight={600}
-              >
-                {metric.clickRate.toFixed(1)}% click
-              </text>
             </g>
           );
         })}
@@ -580,21 +560,6 @@ function SequenceTrendChart({ trends, granularity }: SequenceTrendChartProps) {
             </text>
           );
         })}
-
-        <g transform={`translate(${padding}, ${padding - 16})`}>
-          {sequenceNumbers.map((seq, index) => {
-            const colorPalette = ["#3b82f6", "#10b981", "#a855f7", "#f59e0b", "#ef4444", "#06b6d4"];
-            const color = colorPalette[index % colorPalette.length];
-            return (
-              <g key={`legend-${seq}`} transform={`translate(${index * 110}, 0)`}>
-                <rect width={12} height={12} rx={3} fill={color} />
-                <text x={18} y={10} fontSize={11} fill="#94a3b8">
-                  Sequence {seq}
-                </text>
-              </g>
-            );
-          })}
-        </g>
       </svg>
     </div>
   );
