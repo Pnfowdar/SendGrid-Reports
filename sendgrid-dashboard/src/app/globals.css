@@ -1,0 +1,55 @@
+@import "tailwindcss";
+
+:root {
+  --color-background: #0f172a;
+  --color-foreground: #f8fafc;
+  --color-muted: rgba(148, 163, 184, 0.2);
+  --color-muted-foreground: #94a3b8;
+  --color-border: rgba(148, 163, 184, 0.25);
+  --color-card: rgba(30, 41, 59, 0.65);
+  --color-card-foreground: #e2e8f0;
+  --color-primary: #38bdf8;
+  --color-primary-foreground: #0f172a;
+  --color-secondary: rgba(37, 99, 235, 0.65);
+  --color-secondary-foreground: #f8fafc;
+  --color-accent: rgba(59, 130, 246, 0.65);
+  --color-accent-foreground: #ffffff;
+  --color-destructive: #ef4444;
+  --color-destructive-foreground: #ffffff;
+  --color-ring: rgba(56, 189, 248, 0.65);
+  --radius-xl: 24px;
+  --radius-lg: 18px;
+  --radius-md: 12px;
+  --radius-sm: 8px;
+}
+
+.light {
+  color-scheme: light;
+}
+
+.dark {
+  color-scheme: dark;
+}
+
+body {
+  background: radial-gradient(circle at top, rgba(56, 189, 248, 0.1), transparent 55%),
+    radial-gradient(circle at bottom, rgba(37, 99, 235, 0.1), transparent 45%),
+    #020617;
+  color: var(--color-foreground);
+  font-family: var(--font-geist-sans), system-ui, -apple-system, "Segoe UI", sans-serif;
+  min-height: 100vh;
+}
+
+* {
+  border-color: var(--color-border);
+}
+
+/* Fix native select dropdowns for dark mode */
+select option {
+  background-color: #1e293b;
+  color: #f8fafc;
+}
+
+select {
+  color-scheme: dark;
+}

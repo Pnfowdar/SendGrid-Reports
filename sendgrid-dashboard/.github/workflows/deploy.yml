@@ -1,0 +1,82 @@
+name: Deploy Dashboard
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  lint-test-build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: sendgrid-dashboard/package-lock.json
+
+      - name: Install dependencies
+        working-directory: sendgrid-dashboard
+        run: npm ci
+
+      - name: Lint
+        working-directory: sendgrid-dashboard
+        run: npm run lint
+
+      - name: Install Playwright browsers
+        working-directory: sendgrid-dashboard
+        run: npx playwright install --with-deps
+
+      - name: Run Playwright tests
+        working-directory: sendgrid-dashboard
+        run: npm run test:e2e
+
+      - name: Build
+        working-directory: sendgrid-dashboard
+        run: npm run build
+
+      - name: Upload build artifact
+        if: github.ref != 'refs/heads/main'
+        uses: actions/upload-artifact@v4
+        with:
+          name: next-build
+          path: sendgrid-dashboard/.next
+
+  deploy:
+    if: github.ref == 'refs/heads/main'
+    needs: lint-test-build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        working-directory: sendgrid-dashboard
+        run: npm ci
+
+      - name: Build
+        working-directory: sendgrid-dashboard
+        run: npm run build
+
+      - name: Deploy to Vercel
+        uses: amondnet/vercel-action@v21
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          working-directory: sendgrid-dashboard
+          scope: ${{ secrets.VERCEL_SCOPE }}
