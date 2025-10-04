@@ -1,5 +1,5 @@
 import type { EmailEvent } from "@/types";
-import { startOfDay, startOfWeek, startOfMonth, isWithinInterval, differenceInDays } from "date-fns";
+import { startOfDay, startOfWeek, startOfMonth, differenceInDays } from "date-fns";
 
 export type TimeGranularity = "daily" | "weekly" | "monthly";
 
@@ -80,7 +80,6 @@ export function analyzeEmailSequences(
       }
 
       // Track engagement for this sequence
-      const sgEventId = email.sg_event_id;
       const hasOpened = events.some(
         (e) => e.email === recipient && e.event === "open" && e.timestamp >= email.timestamp
       );
