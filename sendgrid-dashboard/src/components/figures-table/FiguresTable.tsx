@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import { BarChart3 } from "lucide-react";
 import type { DailyAggregate } from "@/types";
-import { formatNumber } from "@/lib/format";
+import { formatNumber, formatDate } from "@/lib/format";
 
 interface FiguresTableProps {
   aggregates: DailyAggregate[];
@@ -109,7 +109,7 @@ export function FiguresTable({ aggregates, granularity, onGranularityChange, isL
             ) : (
               rows.map((row) => (
                 <tr key={row.key} className="border-b border-border/20 last:border-0">
-                  <td className="px-4 py-3 text-xs text-muted-foreground">{row.key}</td>
+                  <td className="px-4 py-3 text-xs text-muted-foreground">{formatDate(row.date)}</td>
                   {COLUMNS.map((column) => (
                     <td key={column.key} className="px-4 py-3 text-right font-medium">
                       {formatNumber(Number(row[column.key] ?? 0))}

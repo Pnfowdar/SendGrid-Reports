@@ -39,7 +39,13 @@ interface Column {
 
 const COLUMNS: Column[] = [
   { key: "timestamp", label: "Timestamp", sortable: true, widthPx: 160, cellClassName: "text-xs" },
-  { key: "email", label: "Recipient", sortable: true, widthPx: 200, cellClassName: "text-card-foreground break-words" },
+  {
+    key: "email",
+    label: "Recipient",
+    sortable: true,
+    widthPx: 200,
+    cellClassName: "text-card-foreground break-words whitespace-normal leading-snug",
+  },
   { key: "event", label: "Event", sortable: true, widthPx: 120, cellClassName: "capitalize" },
   {
     key: "smtp_id",
