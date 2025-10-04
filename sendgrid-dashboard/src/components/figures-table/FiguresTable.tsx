@@ -77,6 +77,12 @@ export function FiguresTable({ aggregates, granularity, onGranularityChange, isL
 
       <div className="relative max-h-[420px] overflow-auto">
         <table className="w-full border-collapse text-sm text-card-foreground">
+          <colgroup>
+            <col style={{ width: "160px" }} />
+            {COLUMNS.map((column) => (
+              <col key={column.key} />
+            ))}
+          </colgroup>
           <caption className="sr-only">
             Aggregated SendGrid metrics displayed by {granularity} granularity including requests, deliveries, engagement, and negative signals.
           </caption>

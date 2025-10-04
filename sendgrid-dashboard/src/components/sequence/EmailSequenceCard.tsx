@@ -477,14 +477,30 @@ function SequenceTrendChart({ trends, granularity }: SequenceTrendChartProps) {
 
   const chartHeight = 200;
   const chartWidth = Math.max(600, trends.length * 120);
-  const padding = 40;
+  const padding = 48;
   const maxValue = Math.max(
     1,
     ...trends.flatMap((trend) => Array.from(trend.sequences.values()))
   );
 
   return (
-    <div className="w-full">
+    <div className="w-full space-y-3">
+      <div className="flex flex-wrap items-center justify-center gap-3 text-xs text-muted-foreground">
+        {sequenceNumbers.map((seq, index) => {
+          const colorPalette = ["#3b82f6", "#10b981", "#a855f7", "#f59e0b", "#ef4444", "#06b6d4"];
+          const color = colorPalette[index % colorPalette.length];
+          return (
+            <div key={seq} className="flex items-center gap-2">
+              <span
+                className="inline-block h-2 w-6 rounded-full"
+                style={{ backgroundColor: color }}
+                aria-hidden
+              />
+              <span className="font-medium text-card-foreground">Sequence {seq}</span>
+            </div>
+          );
+        })}
+      </div>
       <svg
         viewBox={`0 0 ${chartWidth + padding * 2} ${chartHeight + padding * 2}`}
         className="w-full h-auto max-h-[320px]"
