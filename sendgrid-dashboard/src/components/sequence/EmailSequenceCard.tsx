@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { BarChart3, TrendingUp, Users, Mail, Calendar, ChevronDown } from "lucide-react";
+import { BarChart3, TrendingUp, Users, Mail, ChevronDown } from "lucide-react";
 import type { SequenceTrend } from "@/lib/sequence-analytics";
 import type { EmailEvent } from "@/types";
 import {
@@ -139,7 +139,7 @@ export function EmailSequenceCard({ events, dateRange, isLoading }: EmailSequenc
         </div>
         <p className="text-xs text-muted-foreground/80">
           Track how many emails each recipient receives in their journey. Sequence position is determined by the order of
-          "processed" events per recipient.
+          &quot;processed&quot; events per recipient.
         </p>
       </header>
 

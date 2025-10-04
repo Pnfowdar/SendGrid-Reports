@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, useEffect, useRef } from "react";
+import type { ChangeEvent } from "react";
 import { X } from "lucide-react";
 import { DateTime } from "luxon";
 import { UploadDropzone } from "@/components/upload/UploadDropzone";
@@ -30,7 +31,7 @@ import {
   exportCategoriesCsv,
   exportFiguresCsv,
 } from "@/lib/export";
-import type { CategoryMetricKey, EmailEvent } from "@/types";
+import type { CategoryMetricKey, EmailEvent, DashboardFilters } from "@/types";
 
 type StoredEvents = Array<EmailEvent & { uploadedAt: Date }>;
 
@@ -52,6 +53,13 @@ export default function Home() {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  const handleStickyEventTypeChange = (event: ChangeEvent<HTMLSelectElement>) => {
+    dispatch({
+      type: "SET_FILTERS",
+      payload: { eventType: event.target.value as DashboardFilters["eventType"] },
+    });
+  };
 
   const filteredEvents = useMemo(() => filterEvents(state.events, state.filters), [state.events, state.filters]);
   const categories = useMemo(
@@ -166,7 +174,7 @@ export default function Home() {
                 <div className="min-w-[140px]">
                   <select
                     value={state.filters.eventType ?? "all"}
-                    onChange={(e) => dispatch({ type: "SET_FILTERS", payload: { eventType: e.target.value as any } })}
+                    onChange={handleStickyEventTypeChange}
                     disabled={!state.events.length}
                     className="w-full rounded-lg border border-border/60 bg-card/80 px-3 py-2 text-sm text-foreground shadow-inner transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40 disabled:cursor-not-allowed disabled:opacity-60 [&>option]:bg-card [&>option]:text-foreground"
                   >
