@@ -1,11 +1,10 @@
 "use client";
 
-import { useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { useMemo, useState, type CSSProperties, type ReactNode } from "react";
 import { ArrowDown, ArrowUp, ArrowUpDown, Download, Search } from "lucide-react";
 import type { EmailEvent } from "@/types";
 import { formatDateTime } from "@/lib/format";
 import { cn } from "@/utils/cn";
-import { useVirtualizer } from "@tanstack/react-virtual";
 
 interface ActivityFeedProps {
   events: EmailEvent[];
@@ -13,17 +12,16 @@ interface ActivityFeedProps {
   onRequestExport?: () => void;
 }
 
-type ColumnKey = "timestamp" | "email" | "event" | "smtp_id" | "category" | "activity";
+type ColumnKey = "timestamp" | "unique_id" | "email" | "event" | "category";
 
 interface TableRowData {
   key: string;
   timestamp: string;
   timestampValue: number;
+  unique_id: string;
   email: string;
   event: string;
-  smtp_id: string;
   category: string;
-  activity: string;
   searchText: string;
 }
 
@@ -31,63 +29,46 @@ interface Column {
   key: ColumnKey;
   label: string;
   sortable?: boolean;
-  widthPx?: number;
-  minWidthPx?: number;
+  width?: string;
+  minWidth?: string;
   cellClassName?: string;
   render?: (row: TableRowData) => ReactNode;
 }
 
 const COLUMNS: Column[] = [
-  { key: "timestamp", label: "Timestamp", sortable: true, widthPx: 160, cellClassName: "text-xs" },
+  { key: "timestamp", label: "Timestamp", sortable: true, width: "12rem", cellClassName: "text-xs" },
+  {
+    key: "unique_id",
+    label: "Unique ID",
+    sortable: true,
+    width: "10rem",
+    cellClassName: "text-xs text-muted-foreground",
+  },
   {
     key: "email",
     label: "Recipient",
     sortable: true,
-    widthPx: 200,
+    minWidth: "16rem",
     cellClassName: "text-card-foreground break-words whitespace-normal leading-snug",
   },
-  { key: "event", label: "Event", sortable: true, widthPx: 120, cellClassName: "capitalize" },
-  {
-    key: "smtp_id",
-    label: "SMTP ID",
-    widthPx: 200,
-    render: (row) => row.smtp_id || "—",
-    cellClassName: "truncate text-xs text-muted-foreground",
-  },
+  { key: "event", label: "Event", sortable: true, width: "8rem", cellClassName: "capitalize" },
   {
     key: "category",
     label: "Categories",
-    widthPx: 280,
-    minWidthPx: 240,
-    cellClassName: "text-xs text-muted-foreground break-words",
-  },
-  {
-    key: "activity",
-    label: "Activity",
-    widthPx: 120,
-    cellClassName: "text-xs text-muted-foreground",
+    minWidth: "18rem",
+    cellClassName: "text-xs text-muted-foreground break-words whitespace-normal leading-snug",
   },
 ];
 
 function getColumnStyle(column: Column) {
   const style: CSSProperties = {};
-  if (column.widthPx) {
-    style.width = `${column.widthPx}px`;
+  if (column.width) {
+    style.width = column.width;
   }
-  if (column.minWidthPx) {
-    style.minWidth = `${column.minWidthPx}px`;
+  if (column.minWidth) {
+    style.minWidth = column.minWidth;
   }
   return style;
-}
-
-function renderColGroup() {
-  return (
-    <colgroup>
-      {COLUMNS.map((column) => (
-        <col key={column.key} style={getColumnStyle(column)} />
-      ))}
-    </colgroup>
-  );
 }
 
 export function ActivityFeed({ events, isLoading, onRequestExport }: ActivityFeedProps) {
@@ -99,21 +80,20 @@ export function ActivityFeed({ events, isLoading, onRequestExport }: ActivityFee
 
   const baseRows = useMemo(() => {
     return events.map<TableRowData>((event) => ({
-      key: event.sg_event_id,
+      key: `${event.unique_id}-${event.sg_event_id}`,
       timestamp: formatDateTime(event.timestamp),
       timestampValue: event.timestamp.getTime(),
+      unique_id: event.unique_id.toString(),
       email: event.email,
       event: event.event,
-      smtp_id: event.smtp_id ?? "",
       category: event.category.length ? event.category.join(" · ") : "Uncategorized",
-      activity: humanizeActivity(event.event),
       searchText: [
         formatDateTime(event.timestamp).toLowerCase(),
+        event.unique_id.toString(),
+        event.sg_event_id.toLowerCase(),
         event.email.toLowerCase(),
         event.event.toLowerCase(),
-        (event.smtp_id ?? "").toLowerCase(),
         (event.category.length ? event.category.join(" ") : "uncategorized").toLowerCase(),
-        humanizeActivity(event.event).toLowerCase(),
       ].join(" "),
     }));
   }, [events]);
@@ -131,6 +111,11 @@ export function ActivityFeed({ events, isLoading, onRequestExport }: ActivityFee
       if (key === "timestamp") {
         return (a.timestampValue - b.timestampValue) * multiplier;
       }
+      if (key === "unique_id") {
+        // Numeric sort for unique_id
+        return (Number(a.unique_id) - Number(b.unique_id)) * multiplier;
+      }
+      // String sort for other columns
       const valueA = (a[key] ?? "").toString().toLowerCase();
       const valueB = (b[key] ?? "").toString().toLowerCase();
       if (valueA < valueB) return -1 * multiplier;
@@ -154,14 +139,6 @@ export function ActivityFeed({ events, isLoading, onRequestExport }: ActivityFee
       };
     });
   };
-
-  const scrollParentRef = useRef<HTMLDivElement>(null);
-  const rowVirtualizer = useVirtualizer({
-    count: sortedRows.length,
-    getScrollElement: () => scrollParentRef.current,
-    estimateSize: () => 48,
-    overscan: 12,
-  });
 
   return (
     <div className="w-full rounded-2xl sm:rounded-3xl border border-border/70 bg-card/85 p-4 sm:p-6 shadow-floating-card">
@@ -208,12 +185,10 @@ export function ActivityFeed({ events, isLoading, onRequestExport }: ActivityFee
       </header>
 
       <div
-        ref={scrollParentRef}
         className="relative mt-4 max-h-[520px] overflow-auto rounded-2xl border border-border/40 bg-background/40"
         aria-rowcount={sortedRows.length}
       >
-        <table className="min-w-full table-fixed border-collapse text-sm text-card-foreground" data-testid="activity-feed-table">
-          {renderColGroup()}
+        <table className="min-w-full border-collapse text-sm text-card-foreground" data-testid="activity-feed-table">
           <caption className="sr-only">
             Filtered SendGrid events including timestamps, recipients, event types, SMTP identifiers, categories, and activity summary.
           </caption>
@@ -280,88 +255,31 @@ export function ActivityFeed({ events, isLoading, onRequestExport }: ActivityFee
                 </td>
               </tr>
             ) : (
-              <tr>
-                <td colSpan={COLUMNS.length} className="p-0">
-                  <div
-                    style={{
-                      position: "relative",
-                      height: rowVirtualizer.getTotalSize(),
-                      width: "100%",
-                    }}
-                  >
-                    {rowVirtualizer.getVirtualItems().map((virtualRow) => {
-                      const row = sortedRows[virtualRow.index];
-                      return (
-                        <table
-                          key={row.key}
-                          role="presentation"
-                          style={{
-                            position: "absolute",
-                            top: 0,
-                            left: 0,
-                            width: "100%",
-                            transform: `translateY(${virtualRow.start}px)`,
-                          }}
-                          className="table-fixed"
-                        >
-                          {renderColGroup()}
-                          <tbody>
-                            <tr
-                              className="border-b border-border/20 bg-card/40 transition hover:bg-primary/10"
-                              data-testid="activity-feed-row"
-                            >
-                              {COLUMNS.map((column) => (
-                                <td
-                                  key={column.key}
-                                  className={cn(
-                                    "px-4 py-3 text-left align-top",
-                                    column.cellClassName ?? "text-xs text-muted-foreground"
-                                  )}
-                                  style={getColumnStyle(column)}
-                                  scope={column.key === "timestamp" ? "row" : undefined}
-                                >
-                                  {column.render ? column.render(row) : row[column.key]}
-                                </td>
-                              ))}
-                            </tr>
-                          </tbody>
-                        </table>
-                      );
-                    })}
-                  </div>
-                </td>
-              </tr>
+              sortedRows.map((row) => (
+                <tr
+                  key={row.key}
+                  className="border-b border-border/20 bg-card/40 transition hover:bg-primary/10"
+                  data-testid="activity-feed-row"
+                >
+                  {COLUMNS.map((column) => (
+                    <td
+                      key={column.key}
+                      className={cn(
+                        "px-4 py-3 align-top whitespace-normal",
+                        column.cellClassName ?? "text-xs text-muted-foreground"
+                      )}
+                      style={getColumnStyle(column)}
+                      scope={column.key === "timestamp" ? "row" : undefined}
+                    >
+                      {column.render ? column.render(row) : row[column.key]}
+                    </td>
+                  ))}
+                </tr>
+              ))
             )}
           </tbody>
         </table>
       </div>
     </div>
   );
-}
-
-function humanizeActivity(event: EmailEvent["event"]): string {
-  switch (event) {
-    case "processed":
-      return "Enqueued";
-    case "delivered":
-      return "Delivered";
-    case "open":
-      return "Opened";
-    case "click":
-      return "Clicked";
-    case "bounce":
-      return "Bounced";
-    case "spamreport":
-      return "Marked as spam";
-    case "unsubscribe":
-      return "Unsubscribed";
-    case "dropped":
-      return "Dropped";
-    case "block":
-      return "Blocked";
-    case "deferred":
-      return "Deferred";
-    default:
-      return event;
-  }
 }

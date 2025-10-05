@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createServerSupabaseClient, transformSupabaseEvent } from "@/lib/supabase";
+import {
+  createServerSupabaseClient,
+  transformSupabaseEvent,
+  type SupabaseEmailEvent,
+} from "@/lib/supabase";
 
 export const dynamic = "force-dynamic";
 
@@ -14,7 +18,7 @@ export async function GET(request: NextRequest) {
     const oneYearAgo = new Date();
     oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
     
-    let allData: any[] = [];
+    const allData: SupabaseEmailEvent[] = [];
     let lastFetchedId = afterId ? parseInt(afterId, 10) : 0;
     const BATCH_SIZE = 1000;
     let hasMore = true;
@@ -69,7 +73,7 @@ export async function GET(request: NextRequest) {
         break;
       }
 
-      allData = allData.concat(data);
+      allData.push(...data);
       lastFetchedId = data[data.length - 1]["Unique ID"];
       
       console.log(`[API] Fetched batch: ${data.length} records (total so far: ${allData.length}, last ID: ${lastFetchedId})`);

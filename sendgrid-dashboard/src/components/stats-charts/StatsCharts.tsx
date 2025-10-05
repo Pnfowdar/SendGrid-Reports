@@ -11,6 +11,8 @@ import {
   YAxis,
 } from "recharts";
 import { useMemo, useState } from "react";
+import { DateTime } from "luxon";
+import { formatDate } from "@/lib/format";
 
 interface TimeseriesPoint {
   date: string;
@@ -116,7 +118,11 @@ export function StatsCharts({ data, isLoading }: StatsChartsProps) {
                 ))}
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.2)" />
-              <XAxis dataKey="date" tick={{ fill: "#94a3b8", fontSize: 12 }} />
+              <XAxis
+                dataKey="date"
+                tick={{ fill: "#94a3b8", fontSize: 12 }}
+                tickFormatter={(value: string) => formatDate(value)}
+              />
               <YAxis tick={{ fill: "#94a3b8", fontSize: 12 }} allowDecimals={false} />
               <Tooltip
                 contentStyle={{
@@ -124,6 +130,9 @@ export function StatsCharts({ data, isLoading }: StatsChartsProps) {
                   borderRadius: 12,
                   border: "1px solid rgba(148,163,184,0.35)",
                 }}
+                labelFormatter={(label: string) =>
+                  DateTime.fromISO(label).toFormat("dd LLL yyyy")
+                }
                 labelStyle={{ color: "#e2e8f0" }}
                 itemStyle={{ color: "#e2e8f0" }}
               />
