@@ -69,6 +69,36 @@ function reducer(state: DashboardState, action: DashboardAction): DashboardState
       } satisfies DashboardState;
     }
 
+    case "LOAD_DATA": {
+      const { events, loadedAt } = action.payload;
+      const nextEvents = normalizeEvents(events);
+
+      return {
+        ...state,
+        events: nextEvents,
+        lastUpdated: loadedAt,
+      } satisfies DashboardState;
+    }
+
+    case "APPEND_DATA": {
+      const { events, loadedAt } = action.payload;
+      const newEvents = normalizeEvents(events);
+      
+      // Merge new events, ensuring no duplicates by unique_id
+      const existingIds = new Set(state.events.map((e) => e.unique_id));
+      const toAdd = newEvents.filter((e) => !existingIds.has(e.unique_id));
+      
+      const merged = [...state.events, ...toAdd].sort(
+        (a, b) => a.timestamp.getTime() - b.timestamp.getTime()
+      );
+
+      return {
+        ...state,
+        events: merged,
+        lastUpdated: loadedAt,
+      } satisfies DashboardState;
+    }
+
     case "SET_FILTERS": {
       const nextFilters = parseFilters(state.filters, action.payload);
 

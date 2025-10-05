@@ -104,7 +104,7 @@ export function ActivityFeed({ events, isLoading, onRequestExport }: ActivityFee
       timestampValue: event.timestamp.getTime(),
       email: event.email,
       event: event.event,
-      smtp_id: event.smtp_id,
+      smtp_id: event.smtp_id ?? "",
       category: event.category.length ? event.category.join(" · ") : "Uncategorized",
       activity: humanizeActivity(event.event),
       searchText: [

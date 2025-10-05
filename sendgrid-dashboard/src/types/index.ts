@@ -11,12 +11,14 @@ export type EventType =
   | "block";
 
 export interface EmailEvent {
+  unique_id: number;
   sg_event_id: string;
-  smtp_id: string;
   email: string;
   event: EventType;
   timestamp: Date;
   category: string[];
+  // Legacy fields (removed from new schema)
+  smtp_id?: string;
   email_account_id?: string;
 }
 
@@ -77,5 +79,7 @@ export interface DashboardState {
 
 export type DashboardAction =
   | { type: "UPLOAD_DATA"; payload: { events: EmailEvent[]; uploadedAt: Date } }
+  | { type: "LOAD_DATA"; payload: { events: EmailEvent[]; loadedAt: Date } }
+  | { type: "APPEND_DATA"; payload: { events: EmailEvent[]; loadedAt: Date } }
   | { type: "SET_FILTERS"; payload: Partial<DashboardFilters> }
   | { type: "RESET" };

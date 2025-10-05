@@ -16,19 +16,44 @@ npm install
 
 ## Environment variables
 
-Create `.env.local` with the following values when enabling authentication:
+### Required Variables
 
+Create `.env.local` in the `sendgrid-dashboard` directory:
+
+```bash
+# Authentication (Required)
+DASHBOARD_USERNAME=your-username
+DASHBOARD_PASSWORD=your-secure-password
+AUTH_SECRET=random-32-plus-character-secret
+
+# Supabase (Optional - for future database features)
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_ANON_KEY=your-anon-key
+SUPABASE_SERVICE_ROLE=your-service-role-key
 ```
-DASHBOARD_USERNAME=...
-DASHBOARD_PASSWORD=...
+
+**Important**: Never commit `.env.local` to version control. Use `.env.example` as a template.
+
+### Generating Secrets
+
+```bash
+# Generate AUTH_SECRET (Node.js)
+node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
+
+# Or use OpenSSL
+openssl rand -base64 32
 ```
 
 ## What's new
 
-- Sticky filter header for quick access to recipient, event type, and date range controls.
-- Searchable category selector with type-ahead filtering and improved dark-mode contrast.
-- Recipient email filter now supports instant clearing via keyboard or clear button.
-- Default dashboard view loads the most recent 7 days (including today).
+- **Supabase Integration**: Dashboard now loads data from Supabase Postgres database
+- **Auto-load on Login**: Automatically fetches last 365 days of SendGrid events  
+- **Manual Refresh**: Click "Refresh Data" to fetch only new events (incremental)
+- **No Upload Required**: Removed Excel upload; all data comes from database
+- Sticky filter header for quick access to recipient, event type, and date range controls
+- Searchable category selector with type-ahead filtering and improved dark-mode contrast
+- Recipient email filter now supports instant clearing via keyboard or clear button
+- Default dashboard view loads the most recent 7 days (including today)
 
 ## Available scripts
 
@@ -69,22 +94,73 @@ The suite in `tests/e2e/dashboard.spec.ts` covers:
 - `src/lib/**` – Excel parser, aggregations, filters, formatters, CSV export helpers
 - `tests/e2e/**` – Playwright scenarios driven by sample dataset
 
-## Deployment (preview)
+## Deployment
 
-Provisioned for Vercel deployment:
+### Vercel Setup
 
-1. Configure Vercel project (Next.js app directory, Node.js 20 runtime)
-2. Set environment variables from `.env.local` (if using auth)
-3. Connect GitHub repo; enable preview builds per PR
-4. CI workflow will run `npm run lint`, `npm run test:e2e`, and `npm run build` before deploying (see `.github/workflows/deploy.yml` once added)
+1. **Import Project**
+   ```bash
+   # Connect to Vercel
+   vercel
+   ```
+
+2. **Configure Environment Variables**
+   - Go to Project → Settings → Environment Variables
+   - Add all required variables from `.env.local`:
+     - `DASHBOARD_USERNAME`
+     - `DASHBOARD_PASSWORD`
+     - `AUTH_SECRET`
+     - Optional: `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE`
+   - Set for **Production**, **Preview**, and **Development** environments
+
+3. **Deploy**
+   ```bash
+   # Production deployment
+   vercel --prod
+   
+   # Or push to main branch (auto-deploys)
+   git push origin main
+   ```
+
+4. **Verify**
+   - Navigate to deployment URL
+   - Should redirect to `/login`
+   - Sign in with credentials from environment variables
+   - Upload test Excel file and verify dashboard functionality
+
+### Security Checklist
+
+- ✅ All secrets stored in Vercel environment variables (not in code)
+- ✅ `.env.local` added to `.gitignore`
+- ✅ HTTP-only cookies for session tokens
+- ✅ Middleware protects all routes except login and public assets
+- ✅ JWT tokens expire after 7 days (or 12 hours without "remember me")
+- ✅ HTTPS enforced in production (Vercel default)
 
 ### Rollback plan
 
 - Use Vercel Deployments page to promote the most recent successful deployment or redeploy a tagged commit
 - Ensure `npm run lint`, `npm run test:e2e`, and `npm run build` succeed locally before promoting
 
+## Supabase Configuration
+
+The dashboard loads SendGrid events from a Supabase Postgres database. See **[SUPABASE_SETUP.md](../SUPABASE_SETUP.md)** for:
+
+- Database schema and table structure
+- CSV import instructions  
+- Index configuration for performance
+- Incremental refresh strategy
+
+**Quick Setup**:
+1. Create `sendgrid_events` table in Supabase (see schema in docs)
+2. Import CSV data via Supabase Table Editor
+3. Set `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE` in environment variables
+4. Dashboard auto-loads 365 days of data on login
+
 ## Further reading
 
 - `specs/001-sendgrid-deliverability-engagement/spec.md` – functional requirements & non-functionals
 - `specs/001-sendgrid-deliverability-engagement/data-model.md` – in-memory interfaces used across the app
 - `specs/001-sendgrid-deliverability-engagement/quickstart.md` – acceptance scenarios mirrored by E2E tests
+- `AUTHENTICATION_SETUP.md` – Authentication implementation guide
+- `SUPABASE_SETUP.md` – Database schema and configuration

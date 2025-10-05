@@ -1,5 +1,6 @@
 import { ReactNode } from "react";
 import { formatDateTime } from "@/lib/format";
+import { LogoutButton } from "@/components/auth/LogoutButton";
 
 interface DashboardShellProps {
   children: ReactNode;
@@ -22,16 +23,19 @@ export function DashboardShell({ children, eventsCount, lastUpdated }: Dashboard
                 Filter by recipient, event type, and date range, then export insights for reporting.
               </p>
             </div>
-            <div className="flex flex-col gap-1 text-right text-xs text-muted-foreground">
-              <span
-                className="rounded-full bg-primary/15 px-3 py-1 font-semibold text-primary"
-                data-testid="event-count"
-              >
-                {eventsCount.toLocaleString()} events loaded
-              </span>
-              <span data-testid="last-updated">
-                Last updated: {lastUpdated ? formatDateTime(lastUpdated) : "Awaiting upload"}
-              </span>
+            <div className="flex flex-col items-stretch gap-2 text-xs text-muted-foreground md:items-end">
+              <div className="flex flex-col items-end gap-1">
+                <span
+                  className="rounded-full bg-primary/15 px-3 py-1 font-semibold text-primary"
+                  data-testid="event-count"
+                >
+                  {eventsCount.toLocaleString()} events loaded
+                </span>
+                <span data-testid="last-updated">
+                  Last updated: {lastUpdated ? formatDateTime(lastUpdated) : "Awaiting upload"}
+                </span>
+              </div>
+              <LogoutButton />
             </div>
           </div>
         </div>

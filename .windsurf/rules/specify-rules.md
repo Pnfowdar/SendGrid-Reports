@@ -13,6 +13,8 @@ This dashboard visualizes SendGrid email deliverability and engagement metrics. 
 
 ## Active Technologies
 - TypeScript 5.x / Node.js 18+ (backend), TypeScript 5.x / React 18+ (frontend) + Next.js 14+, React 18+, Tailwind CSS, shadcn/ui components, Recharts/Chart.js, ExcelJS (parser), Vercel (hosting) (001-sendgrid-deliverability-engagement)
+- TypeScript 5.x with React 19.1.0, Next.js 15.5.4 (App Router) (main)
+- localStorage (client-side persistence, 10MB quota management) (main)
 
 ## Project Structure
 ```
@@ -60,6 +62,7 @@ npm test; npm run lint
 TypeScript 5.x / Node.js 18+ (backend), TypeScript 5.x / React 18+ (frontend): Follow standard conventions
 
 ## Recent Changes
+- main: Added TypeScript 5.x with React 19.1.0, Next.js 15.5.4 (App Router)
 - 001-sendgrid-deliverability-engagement: Added TypeScript 5.x / Node.js 18+ (backend), TypeScript 5.x / React 18+ (frontend) + Next.js 14+, React 18+, Tailwind CSS, shadcn/ui components, Recharts/Chart.js, ExcelJS (parser), Vercel (hosting)
 
 <!-- MANUAL ADDITIONS START -->

@@ -233,14 +233,17 @@ export async function parseSendGridExcel(file: File): Promise<EmailEvent[]> {
 
     seen.add(sgEventId);
 
+    const parsedUniqueId = Number(sgEventId);
+    const uniqueId = Number.isNaN(parsedUniqueId) ? Date.now() + events.length : parsedUniqueId;
+
     events.push({
+      unique_id: uniqueId,
       sg_event_id: sgEventId,
       email,
       event: eventType,
       timestamp,
       smtp_id: row.smtpId?.trim() ?? "",
       category: coerceCategory(row.category),
-      email_account_id: row.emailAccountId?.trim() || undefined,
     });
   }
 

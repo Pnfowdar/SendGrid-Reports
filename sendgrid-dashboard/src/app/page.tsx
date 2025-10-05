@@ -1,10 +1,9 @@
 "use client";
 
-import { useMemo, useState, useEffect, useRef } from "react";
+import { useMemo, useState, useEffect, useRef, useCallback } from "react";
 import type { ChangeEvent } from "react";
-import { X } from "lucide-react";
+import { X, RefreshCw } from "lucide-react";
 import { DateTime } from "luxon";
-import { UploadDropzone } from "@/components/upload/UploadDropzone";
 import { FilterBar, DateRangePicker } from "@/components/filters/FilterBar";
 import { MetricsPanel } from "@/components/metrics-panel/MetricsPanel";
 import { ActivityFeed } from "@/components/activity-feed/ActivityFeed";
@@ -16,6 +15,7 @@ import { EmailSequenceCard } from "@/components/sequence/EmailSequenceCard";
 import { ExportButton } from "@/components/export/ExportButton";
 import { DashboardShell } from "@/components/layout/DashboardShell";
 import { useDashboardState } from "@/hooks/useDashboardState";
+import { useSupabaseEvents } from "@/hooks/useSupabaseEvents";
 import {
   computeDailyAggregates,
   computeCategoryAggregates,
@@ -33,15 +33,31 @@ import {
 } from "@/lib/export";
 import type { CategoryMetricKey, EmailEvent, DashboardFilters } from "@/types";
 
-type StoredEvents = Array<EmailEvent & { uploadedAt: Date }>;
-
 export default function Home() {
   const [state, dispatch] = useDashboardState();
   const [granularity, setGranularity] = useState<AggregateGranularity>("daily");
-  const [storedEvents, setStoredEvents] = useState<StoredEvents>([]);
   const [sortKey, setSortKey] = useState<CategoryMetricKey>("unique_opens");
   const [showStickyFilters, setShowStickyFilters] = useState(false);
   const filterSectionRef = useRef<HTMLDivElement>(null);
+
+  const handleDataLoaded = useCallback(
+    (events: EmailEvent[], loadedAt: Date) => {
+      dispatch({ type: "LOAD_DATA", payload: { events, loadedAt } });
+    },
+    [dispatch]
+  );
+
+  const handleDataAppended = useCallback(
+    (events: EmailEvent[], loadedAt: Date) => {
+      dispatch({ type: "APPEND_DATA", payload: { events, loadedAt } });
+    },
+    [dispatch]
+  );
+
+  const { isLoading, isRefreshing, error, refreshData } = useSupabaseEvents(
+    handleDataLoaded,
+    handleDataAppended
+  );
 
   useEffect(() => {
     const handleScroll = () => {
@@ -77,13 +93,6 @@ export default function Home() {
     return aggregates.sort((a, b) => b[sortKey] - a[sortKey]);
   }, [filteredEvents, sortKey]);
 
-  const handleUpload = (events: EmailEvent[]) => {
-    const uploadedAt = new Date();
-    const merged = mergeEvents(storedEvents, events, uploadedAt);
-    setStoredEvents(merged);
-    dispatch({ type: "UPLOAD_DATA", payload: { events: merged, uploadedAt } });
-  };
-
   const handleFiltersReset = () => {
     dispatch({ type: "RESET" });
     setGranularity("daily");
@@ -107,15 +116,29 @@ export default function Home() {
       lastUpdated={state.lastUpdated}
     >
       <div className="grid gap-4 sm:gap-6 md:gap-8 w-full overflow-hidden">
-        <section className="rounded-2xl sm:rounded-3xl border border-border/60 bg-card/60 p-4 sm:p-6 shadow-floating-card">
-          <h2 className="text-base sm:text-lg font-semibold text-card-foreground">1. Upload Excel export</h2>
-          <p className="mt-1 text-xs sm:text-sm text-muted-foreground">
-            Choose the SendGrid Excel file (`SendGrid Stats.xlsx`) to load events into the dashboard. You can reupload to replace the current dataset.
-          </p>
-          <div className="mt-4">
-            <UploadDropzone onUpload={handleUpload} disabled={false} />
-          </div>
-        </section>
+        {isLoading && (
+          <section className="rounded-2xl sm:rounded-3xl border border-border/60 bg-card/60 p-8 shadow-floating-card text-center">
+            <div className="flex flex-col items-center gap-4">
+              <RefreshCw className="h-8 w-8 animate-spin text-primary" />
+              <p className="text-sm text-muted-foreground">Loading events from database...</p>
+            </div>
+          </section>
+        )}
+
+        {error && (
+          <section className="rounded-2xl sm:rounded-3xl border border-destructive/60 bg-destructive/10 p-4 sm:p-6 shadow-floating-card">
+            <h2 className="text-base sm:text-lg font-semibold text-destructive">Error Loading Data</h2>
+            <p className="mt-1 text-xs sm:text-sm text-destructive/80">{error}</p>
+            <button
+              onClick={refreshData}
+              disabled={isRefreshing}
+              className="mt-4 inline-flex items-center gap-2 rounded-lg bg-destructive px-4 py-2 text-sm font-semibold text-destructive-foreground transition hover:bg-destructive/90 disabled:opacity-60"
+            >
+              <RefreshCw className={isRefreshing ? "h-4 w-4 animate-spin" : "h-4 w-4"} />
+              Retry
+            </button>
+          </section>
+        )}
 
         <div ref={filterSectionRef}>
           <section className="rounded-2xl sm:rounded-3xl border border-border/60 bg-card/60 p-4 sm:p-6 shadow-floating-card">
@@ -127,6 +150,14 @@ export default function Home() {
                 </p>
               </div>
               <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={refreshData}
+                  disabled={isRefreshing || isLoading}
+                  className="inline-flex items-center gap-2 rounded-lg border border-border/60 bg-card/60 px-3 py-2 text-sm font-semibold text-card-foreground transition hover:bg-card/80 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  <RefreshCw className={isRefreshing ? "h-4 w-4 animate-spin" : "h-4 w-4"} />
+                  {isRefreshing ? "Refreshing..." : "Refresh Data"}
+                </button>
                 <ExportButton onExport={exportActivity} label="Export activity" />
                 <ExportButton onExport={exportFigures} label="Export figures" />
                 <ExportButton onExport={exportCategories} label="Export categories" />
@@ -221,17 +252,6 @@ export default function Home() {
       </div>
     </DashboardShell>
   );
-}
-
-function mergeEvents(current: StoredEvents, next: EmailEvent[], uploadedAt: Date): StoredEvents {
-  const map = new Map<string, EmailEvent & { uploadedAt: Date }>();
-  for (const existing of current) {
-    map.set(existing.sg_event_id, existing);
-  }
-  for (const event of next) {
-    map.set(event.sg_event_id, { ...event, uploadedAt });
-  }
-  return Array.from(map.values()).sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
 }
 
 function createFilename(prefix: string): string {
