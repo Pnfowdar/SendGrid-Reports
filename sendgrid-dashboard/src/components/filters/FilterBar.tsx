@@ -50,9 +50,22 @@ export function FilterBar({
   onReset,
   isDisabled,
 }: FilterBarProps) {
+  const [emailInput, setEmailInput] = useState(filters.emails[0] ?? "");
+  
   const sortedCategories = useMemo(() => ["All categories", ...availableCategories], [
     availableCategories,
   ]);
+
+  const handleEmailKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === "Enter") {
+      onChange({ emails: emailInput ? [emailInput] : [] });
+    }
+  };
+
+  const handleEmailClear = () => {
+    setEmailInput("");
+    onChange({ emails: [] });
+  };
 
   return (
     <form
@@ -80,21 +93,22 @@ export function FilterBar({
       <fieldset className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4" disabled={isDisabled}>
         <legend className="sr-only">Filter email events</legend>
         <label className="flex flex-col gap-1" htmlFor="filter-email">
-          <span className="text-xs font-medium text-muted-foreground">Recipient email</span>
+          <span className="text-xs font-medium text-muted-foreground">Recipient email (press Enter)</span>
           <div className="relative">
             <input
               id="filter-email"
               type="text"
-              value={filters.email ?? ""}
-              onChange={(event) => onChange({ email: event.target.value || undefined })}
+              value={emailInput}
+              onChange={(event) => setEmailInput(event.target.value)}
+              onKeyDown={handleEmailKeyDown}
               placeholder="e.g. alex@example.com"
               disabled={isDisabled}
               className="w-full rounded-lg border border-border/60 bg-background/40 px-3 py-2 pr-10 text-sm text-foreground shadow-inner transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40 disabled:cursor-not-allowed disabled:opacity-60"
             />
-            {filters.email && (
+            {emailInput && (
               <button
                 type="button"
-                onClick={() => onChange({ email: undefined })}
+                onClick={handleEmailClear}
                 aria-label="Clear recipient email filter"
                 className="absolute right-2 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-full bg-background/70 text-muted-foreground transition hover:bg-primary/20 hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
               >
@@ -105,9 +119,9 @@ export function FilterBar({
         </label>
 
         <CategoryFilter
-          value={filters.category}
+          value={filters.categories[0]}
           categories={sortedCategories}
-          onChange={(value) => onChange({ category: value })}
+          onChange={(value) => onChange({ categories: value ? [value] : [] })}
           disabled={isDisabled}
         />
 
@@ -115,9 +129,9 @@ export function FilterBar({
           <span className="text-xs font-medium text-muted-foreground">Event type</span>
           <select
             id="filter-event-type"
-            value={filters.eventType ?? "all"}
+            value={filters.eventTypes[0] ?? "all"}
             onChange={(event) =>
-              onChange({ eventType: event.target.value as DashboardFilters["eventType"] })
+              onChange({ eventTypes: event.target.value === "all" ? [] : [event.target.value as EventType] })
             }
             disabled={isDisabled}
             className="rounded-lg border border-border/60 bg-card/80 px-3 py-2 text-sm text-foreground shadow-inner transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40 disabled:cursor-not-allowed disabled:opacity-60 [&>option]:bg-card [&>option]:text-foreground"
@@ -443,13 +457,13 @@ function CategoryFilter({ value, categories, onChange, disabled }: CategoryFilte
           <ChevronDown className="h-4 w-4 text-muted-foreground" />
         </button>
         {open && (
-          <div className="absolute z-50 mt-2 w-full rounded-xl border border-border/60 bg-card/95 p-2 shadow-floating-card backdrop-blur-xl">
+          <div className="absolute z-50 mt-2 w-full rounded-xl border border-border/60 bg-slate-900 p-2 shadow-floating-card">
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search categories..."
-              className="mb-2 w-full rounded-lg border border-border/60 bg-background/40 px-3 py-2 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40"
+              className="mb-2 w-full rounded-lg border border-border/60 bg-slate-800 px-3 py-2 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40"
               autoFocus
             />
             <div className="max-h-60 overflow-y-auto">

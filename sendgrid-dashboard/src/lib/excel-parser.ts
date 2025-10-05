@@ -1,4 +1,5 @@
-import { DateTime } from "luxon";
+import { parse, parseISO, isValid } from "date-fns";
+import { toZonedTime } from "date-fns-tz";
 import type { EmailEvent, EventType } from "@/types";
 
 const TIMEZONE = "Australia/Brisbane";
@@ -41,25 +42,33 @@ function parseDate(raw: string | null): Date | null {
   if (!raw) return null;
 
   const trimmed = raw.trim();
-  const isoCandidate = DateTime.fromISO(trimmed, { zone: TIMEZONE });
-
-  if (isoCandidate.isValid) {
-    return isoCandidate.toJSDate();
+  
+  // Try ISO format first
+  try {
+    const isoDate = parseISO(trimmed);
+    if (isValid(isoDate)) {
+      return toZonedTime(isoDate, TIMEZONE);
+    }
+  } catch {
+    // Continue to other formats
   }
 
+  // Try each format
   for (const format of DATE_FORMATS) {
-    const parsed = DateTime.fromFormat(trimmed, format, {
-      zone: TIMEZONE,
-      setZone: true,
-    });
-    if (parsed.isValid) {
-      return parsed.toJSDate();
+    try {
+      const parsed = parse(trimmed, format, new Date());
+      if (isValid(parsed)) {
+        return toZonedTime(parsed, TIMEZONE);
+      }
+    } catch {
+      // Continue to next format
     }
   }
 
+  // Try native Date parsing as fallback
   const jsDate = new Date(trimmed);
   if (!Number.isNaN(jsDate.valueOf())) {
-    return DateTime.fromJSDate(jsDate, { zone: TIMEZONE }).toJSDate();
+    return toZonedTime(jsDate, TIMEZONE);
   }
 
   return null;

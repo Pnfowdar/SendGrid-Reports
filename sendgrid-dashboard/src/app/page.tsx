@@ -3,9 +3,12 @@
 import { useMemo, useState, useEffect, useRef, useCallback } from "react";
 import type { ChangeEvent } from "react";
 import { X, RefreshCw } from "lucide-react";
-import { DateTime } from "luxon";
+import { formatInTimeZone } from "date-fns-tz";
 import { FilterBar, DateRangePicker } from "@/components/filters/FilterBar";
+import type { EventType } from "@/types";
 import { MetricsPanel } from "@/components/metrics-panel/MetricsPanel";
+import { InsightsPanel } from "@/components/analytics/InsightsPanel";
+import { BounceWarnings } from "@/components/analytics/BounceWarnings";
 import { ActivityFeed } from "@/components/activity-feed/ActivityFeed";
 import { FiguresTable } from "@/components/figures-table/FiguresTable";
 import { StatsCharts } from "@/components/stats-charts/StatsCharts";
@@ -31,7 +34,7 @@ import {
   exportCategoriesCsv,
   exportFiguresCsv,
 } from "@/lib/export";
-import type { CategoryMetricKey, EmailEvent, DashboardFilters } from "@/types";
+import type { CategoryMetricKey, EmailEvent } from "@/types";
 
 export default function Home() {
   const [state, dispatch] = useDashboardState();
@@ -71,9 +74,10 @@ export default function Home() {
   }, []);
 
   const handleStickyEventTypeChange = (event: ChangeEvent<HTMLSelectElement>) => {
+    const value = event.target.value;
     dispatch({
       type: "SET_FILTERS",
-      payload: { eventType: event.target.value as DashboardFilters["eventType"] },
+      payload: { eventTypes: value === "all" ? [] : [value as EventType] },
     });
   };
 
@@ -175,6 +179,16 @@ export default function Home() {
           </section>
         </div>
 
+        {/* Insights Panel */}
+        {state.events.length > 0 && (
+          <InsightsPanel />
+        )}
+
+        {/* Bounce Warnings */}
+        {state.events.length > 0 && (
+          <BounceWarnings events={filteredEvents} />
+        )}
+
         {/* Compact Sticky Filter Bar */}
         {showStickyFilters && (
           <div className="fixed top-0 left-0 right-0 z-50 bg-background/98 backdrop-blur-md border-b border-border/60 shadow-lg">
@@ -184,16 +198,16 @@ export default function Home() {
                   <div className="relative">
                     <input
                       type="text"
-                      value={state.filters.email ?? ""}
-                      onChange={(e) => dispatch({ type: "SET_FILTERS", payload: { email: e.target.value || undefined } })}
+                      value={state.filters.emails[0] ?? ""}
+                      onChange={(e) => dispatch({ type: "SET_FILTERS", payload: { emails: e.target.value ? [e.target.value] : [] } })}
                       placeholder="Recipient email..."
                       disabled={!state.events.length}
                       className="w-full rounded-lg border border-border/60 bg-background/40 px-3 py-2 pr-10 text-sm text-foreground shadow-inner transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40 disabled:cursor-not-allowed disabled:opacity-60"
                     />
-                    {state.filters.email && (
+                    {state.filters.emails.length > 0 && (
                       <button
                         type="button"
-                        onClick={() => dispatch({ type: "SET_FILTERS", payload: { email: undefined } })}
+                        onClick={() => dispatch({ type: "SET_FILTERS", payload: { emails: [] } })}
                         aria-label="Clear recipient email filter"
                         className="absolute right-2 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-full bg-background/70 text-muted-foreground transition hover:bg-primary/20 hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
                       >
@@ -204,7 +218,7 @@ export default function Home() {
                 </div>
                 <div className="min-w-[140px]">
                   <select
-                    value={state.filters.eventType ?? "all"}
+                    value={state.filters.eventTypes[0] ?? "all"}
                     onChange={handleStickyEventTypeChange}
                     disabled={!state.events.length}
                     className="w-full rounded-lg border border-border/60 bg-card/80 px-3 py-2 text-sm text-foreground shadow-inner transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40 disabled:cursor-not-allowed disabled:opacity-60 [&>option]:bg-card [&>option]:text-foreground"
@@ -255,6 +269,6 @@ export default function Home() {
 }
 
 function createFilename(prefix: string): string {
-  const now = DateTime.now().setZone("Australia/Brisbane").toFormat("yyyyLLdd-HHmmss");
+  const now = formatInTimeZone(new Date(), "Australia/Brisbane", "yyyyMMdd-HHmmss");
   return `${prefix}-${now}.csv`;
 }

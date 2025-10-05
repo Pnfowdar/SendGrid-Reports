@@ -1,11 +1,22 @@
 # SendGrid Reports
 
-Monorepo for the SendGrid analytics tooling. It currently contains the `sendgrid-dashboard/` Next.js application alongside specifications and supporting assets.
+Monorepo for the SendGrid analytics tooling featuring a Next.js dashboard with **lead generation analytics** and B2B insights powered by Supabase.
+
+## ✨ Key Features
+
+- **📊 Deliverability Analytics** - Track opens, clicks, bounces, and engagement rates
+- **🎯 Lead Generation** - Identify hot leads with engagement scoring (opens × 2 + clicks × 5)
+- **🏢 B2B Company Analytics** - Domain-level insights for corporate lead qualification
+- **⚠️ Bounce Detection** - Auto-flag problematic emails (3+ bounces) to protect sender reputation
+- **💡 Smart Insights** - Automated recommendations with actionable next steps
+- **📈 Real-time Filtering** - Multi-select categories, event types, and date ranges
+- **💾 Supabase Backend** - Auto-loading data with computed columns and indexes
+- **🔗 URL Sharing** - Shareable filter states for team collaboration
 
 ## Repository layout
 
-- `sendgrid-dashboard/` – Next.js 15 single-page dashboard for SendGrid deliverability & engagement analytics
-- `specs/` – product specification, data model, and quickstart documentation
+- `sendgrid-dashboard/` – Next.js 15 dashboard with lead generation analytics
+- `specs/` – product specifications, API contracts, and data models
 - `SendGrid Stats.xlsx` – sample dataset for local testing (do not share publicly)
 
 ## Getting started
@@ -17,7 +28,17 @@ npm install
 npm run dev
 ```
 
-The in-app uploader expects the example spreadsheet at `sendgrid-dashboard/SendGrid Stats.xlsx`. Use the Filters panel to slice by recipient, category, event type, and date range.
+**Environment Setup**: Copy `.env.local.example` to `.env.local` and configure your Supabase credentials:
+
+```bash
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+SUPABASE_SERVICE_ROLE=your-service-role-key
+```
+
+Navigate to:
+- `http://localhost:3000` - Main dashboard with engagement analytics
+- `http://localhost:3000/companies` - B2B company analytics and domain insights
 
 ## Deployment
 

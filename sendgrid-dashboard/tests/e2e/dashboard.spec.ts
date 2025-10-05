@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test'
 import path from 'path'
 import ExcelJS from 'exceljs'
-import { DateTime } from 'luxon'
+import { format, parse, parseISO, isValid } from 'date-fns'
 
 const DATASET_PATH = path.resolve(__dirname, '../../SendGrid Stats.xlsx')
 
@@ -31,13 +31,16 @@ function parseCategory(raw: string): string | null {
   return first || null
 }
 
-function parseTimestamp(raw: string): DateTime | null {
-  const zone = 'Australia/Brisbane'
+function parseTimestamp(raw: string): Date | null {
   const trimmed = raw.trim()
   if (!trimmed) return null
 
-  let dt = DateTime.fromISO(trimmed, { zone })
-  if (dt.isValid) return dt
+  try {
+    const isoDate = parseISO(trimmed)
+    if (isValid(isoDate)) return isoDate
+  } catch {
+    // Continue to other formats
+  }
 
   const formats = [
     "yyyy-MM-dd HH:mm:ss",
@@ -48,15 +51,18 @@ function parseTimestamp(raw: string): DateTime | null {
     'MM/dd/yyyy HH:mm:ss',
   ]
 
-  for (const format of formats) {
-    dt = DateTime.fromFormat(trimmed, format, { zone, setZone: true })
-    if (dt.isValid) return dt
+  for (const fmt of formats) {
+    try {
+      const parsed = parse(trimmed, fmt, new Date())
+      if (isValid(parsed)) return parsed
+    } catch {
+      // Continue to next format
+    }
   }
 
   const jsDate = new Date(trimmed)
   if (!Number.isNaN(jsDate.valueOf())) {
-    dt = DateTime.fromJSDate(jsDate, { zone })
-    if (dt.isValid) return dt
+    return jsDate
   }
 
   return null
@@ -107,7 +113,7 @@ async function loadFixtureRow(): Promise<FixtureRow> {
       email,
       eventType,
       category: parseCategory(categoryRaw),
-      dateISO: dateTime.toISODate()!,
+      dateISO: format(dateTime, 'yyyy-MM-dd'),
     }
   }
 
@@ -156,7 +162,7 @@ test('uploads dataset and filters by recipient and date range', async ({ page })
   await endInput.fill(fixtureRow.dateISO)
 
   await expectRowsMatchEmail(page, fixtureRow.email)
-  const expectedDate = DateTime.fromISO(fixtureRow.dateISO).toFormat('dd LLL yyyy')
+  const expectedDate = format(parseISO(fixtureRow.dateISO), 'dd LLL yyyy')
   await expect(page.locator('[data-testid="activity-feed-row"]').first().locator('td').first()).toContainText(expectedDate)
 })
 

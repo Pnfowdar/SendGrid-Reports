@@ -1,8 +1,8 @@
 
-# Implementation Plan: Dashboard Production Readiness & UX Enhancements
+# Implementation Plan: [FEATURE]
 
-**Branch**: `main` | **Date**: 2025-01-05 | **Spec**: [spec.md](./spec.md)
-**Input**: Feature specification from `/specs/main/spec.md`
+**Branch**: `[###-feature-name]` | **Date**: [DATE] | **Spec**: [link]
+**Input**: Feature specification from `/specs/[###-feature-name]/spec.md`
 
 ## Execution Flow (/plan command scope)
 ```
@@ -31,67 +31,23 @@
 - Phase 3-4: Implementation execution (manual or via tools)
 
 ## Summary
-
-Comprehensive production readiness implementation addressing 10 critical issues plus strategic UX improvements:
-
-**Critical Fixes (P1-P10)**:
-1. Data Persistence - localStorage implementation for uploaded datasets
-2. Error Boundaries - root and component-level error handling
-3. Date Library Migration - consolidate to date-fns, remove Luxon (~50KB savings)
-4. Loading States - skeleton loaders, progress indicators, debounced inputs
-5. CI/CD Pipeline - automated lint, build, test checks on PRs
-6. Keyboard Navigation - arrow keys, shortcuts, WCAG 2.1 AA compliance
-7. Type Safety - strict mode, type guards, no unsafe any
-8. Upload Security - MIME validation, file size limits, CSP headers
-9. Performance Optimization - consolidated aggregations hook, single-pass computation
-10. Environment Configuration - .env.example, zod validation, deployment docs
-
-**Strategic Improvements**:
-- URL-based session sharing (query params for filters)
-- Multi-select filters (categories + event types with OR logic)
-- Insights dashboard section (rule-based metric analysis)
-
-**Technical Approach**: Phased implementation starting with critical stability fixes, followed by performance optimizations, then UX enhancements. All changes maintain backward compatibility with existing E2E tests.
+[Extract from feature spec: primary requirement + technical approach from research]
 
 ## Technical Context
-**Language/Version**: TypeScript 5.x with React 19.1.0, Next.js 15.5.4 (App Router)
-**Primary Dependencies**: 
-- UI: Tailwind CSS 4, Radix UI primitives, Lucide icons
-- Data: ExcelJS 4.4.0, date-fns 3.6.0 (migrating from Luxon)
-- Performance: @tanstack/react-virtual 3.13.12
-- Validation: zod 3.22+ (new)
-**Storage**: localStorage (client-side persistence, 10MB quota management)
-**Testing**: Playwright E2E tests, future: Jest for unit tests
-**Target Platform**: Modern browsers (Chrome 120+, Firefox 120+, Safari 17+, Edge 120+)
-**Project Type**: Web (single Next.js application, client-side rendering)
-**Performance Goals**: 
-- Filter operations <500ms for 10k events
-- Page load with restored data <1s
-- Skeleton loaders visible within 100ms
-- Excel parsing shows progress within 100ms
-**Constraints**: 
-- Bundle size <1MB (currently ~800KB, target ~750KB after Luxon removal)
-- localStorage limit 10MB with warnings at 80%
-- No backend API (pure client-side until future Supabase migration)
-- WCAG 2.1 AA accessibility compliance
-**Scale/Scope**: 
-- Support 10k-50k email events per session
-- 12 major components + 6 lib modules
-- 3 E2E test scenarios (expanding to 6)
+**Language/Version**: [e.g., Python 3.11, Swift 5.9, Rust 1.75 or NEEDS CLARIFICATION]  
+**Primary Dependencies**: [e.g., FastAPI, UIKit, LLVM or NEEDS CLARIFICATION]  
+**Storage**: [if applicable, e.g., PostgreSQL, CoreData, files or N/A]  
+**Testing**: [e.g., pytest, XCTest, cargo test or NEEDS CLARIFICATION]  
+**Target Platform**: [e.g., Linux server, iOS 15+, WASM or NEEDS CLARIFICATION]
+**Project Type**: [single/web/mobile - determines source structure]  
+**Performance Goals**: [domain-specific, e.g., 1000 req/s, 10k lines/sec, 60 fps or NEEDS CLARIFICATION]  
+**Constraints**: [domain-specific, e.g., <200ms p95, <100MB memory, offline-capable or NEEDS CLARIFICATION]  
+**Scale/Scope**: [domain-specific, e.g., 10k users, 1M LOC, 50 screens or NEEDS CLARIFICATION]
 
 ## Constitution Check
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-**Status**: ✅ PASS (No constitution file defined - using industry best practices)
-
-**Applied Principles**:
-1. **Test-First Development**: All new features have E2E tests before implementation
-2. **Simplicity**: Client-side only, no over-engineering, localStorage before backend
-3. **Incremental Migration**: Date library migration in phases, backward compatibility maintained
-4. **Code Quality**: TypeScript strict mode, ESLint enforcement, Prettier formatting
-5. **Accessibility**: WCAG 2.1 AA compliance, keyboard navigation, screen reader support
-
-**Justified Deviations**: None - this is a refactoring/enhancement project, no new architectural patterns introduced
+[Gates determined based on constitution file]
 
 ## Project Structure
 
@@ -107,182 +63,122 @@ specs/[###-feature]/
 ```
 
 ### Source Code (repository root)
+<!--
+  ACTION REQUIRED: Replace the placeholder tree below with the concrete layout
+  for this feature. Delete unused options and expand the chosen structure with
+  real paths (e.g., apps/admin, packages/something). The delivered plan must
+  not include Option labels.
+-->
 ```
-sendgrid-dashboard/
+# [REMOVE IF UNUSED] Option 1: Single project (DEFAULT)
+src/
+├── models/
+├── services/
+├── cli/
+└── lib/
+
+tests/
+├── contract/
+├── integration/
+└── unit/
+
+# [REMOVE IF UNUSED] Option 2: Web application (when "frontend" + "backend" detected)
+backend/
 ├── src/
-│   ├── app/
-│   │   ├── layout.tsx              # [MODIFY] Add root error boundary
-│   │   ├── page.tsx                 # [MODIFY] Add persistence, URL sync, multi-select
-│   │   └── globals.css              # [EXISTS] Styling
+│   ├── models/
+│   ├── services/
+│   └── api/
+└── tests/
+
+frontend/
+├── src/
 │   ├── components/
-│   │   ├── activity-feed/
-│   │   │   └── ActivityFeed.tsx     # [EXISTS] Virtual scrolling
-│   │   ├── categories/
-│   │   │   └── CategoriesTable.tsx  # [EXISTS] Category aggregates
-│   │   ├── error/                   # [NEW] Error boundary components
-│   │   │   ├── ErrorBoundary.tsx    # [NEW] Reusable error boundary
-│   │   │   └── ErrorFallback.tsx    # [NEW] Error UI
-│   │   ├── figures-table/
-│   │   │   └── FiguresTable.tsx     # [EXISTS] Aggregates table
-│   │   ├── filters/
-│   │   │   └── FilterBar.tsx        # [MODIFY] Multi-select, keyboard nav
-│   │   ├── funnel/
-│   │   │   └── FunnelChart.tsx      # [EXISTS] Conversion funnel
-│   │   ├── insights/                # [NEW] Insights section
-│   │   │   └── InsightsPanel.tsx    # [NEW] Rule-based insights
-│   │   ├── layout/
-│   │   │   └── DashboardShell.tsx   # [EXISTS] Main layout
-│   │   ├── metrics-panel/
-│   │   │   └── MetricsPanel.tsx     # [EXISTS] KPI cards
-│   │   ├── sequence/
-│   │   │   └── EmailSequenceCard.tsx # [EXISTS] Sequence analytics
-│   │   ├── stats-charts/
-│   │   │   └── StatsCharts.tsx      # [EXISTS] Time series charts
-│   │   ├── ui/                      # [EXISTS] Shared UI primitives
-│   │   └── upload/
-│   │       └── UploadDropzone.tsx   # [MODIFY] Security validation
-│   ├── hooks/
-│   │   ├── useDashboardState.ts     # [MODIFY] URL sync, localStorage
-│   │   ├── useAggregations.ts       # [NEW] Consolidated aggregations
-│   │   └── useLocalStorage.ts       # [NEW] Persistence hook
-│   ├── lib/
-│   │   ├── aggregations.ts          # [MODIFY] Remove Luxon, optimize
-│   │   ├── excel-parser.ts          # [MODIFY] Remove Luxon, security
-│   │   ├── export.ts                # [EXISTS] CSV export
-│   │   ├── filters.ts               # [MODIFY] Remove Luxon, multi-select
-│   │   ├── format.ts                # [MODIFY] Remove Luxon
-│   │   ├── insights.ts              # [NEW] Rule-based insights logic
-│   │   ├── sequence-analytics.ts    # [EXISTS] Sequence metrics
-│   │   ├── storage.ts               # [NEW] localStorage management
-│   │   └── url-state.ts             # [NEW] URL serialization
-│   ├── types/
-│   │   └── index.ts                 # [MODIFY] Add new types
-│   └── utils/
-│       └── cn.ts                    # [EXISTS] Class name utility
-├── tests/
-│   └── e2e/
-│       └── dashboard.spec.ts        # [MODIFY] Add new test scenarios
-├── .github/
-│   └── workflows/
-│       ├── ci.yml                   # [NEW] CI pipeline
-│       └── deploy.yml               # [NEW] Deployment automation
-├── .env.example                     # [NEW] Environment template
-├── next.config.ts                   # [MODIFY] Add CSP headers
-├── tsconfig.json                    # [MODIFY] Enable strict mode
-└── package.json                     # [MODIFY] Remove Luxon, add zod
+│   ├── pages/
+│   └── services/
+└── tests/
+
+# [REMOVE IF UNUSED] Option 3: Mobile + API (when "iOS/Android" detected)
+api/
+└── [same as backend above]
+
+ios/ or android/
+└── [platform-specific structure: feature modules, UI flows, platform tests]
 ```
 
-**Structure Decision**: Single Next.js application with client-side rendering. No backend required. All new files are co-located with existing structure. Refactoring maintains backward compatibility.
+**Structure Decision**: [Document the selected structure and reference the real
+directories captured above]
 
 ## Phase 0: Outline & Research
+1. **Extract unknowns from Technical Context** above:
+   - For each NEEDS CLARIFICATION → research task
+   - For each dependency → best practices task
+   - For each integration → patterns task
 
-**Research Topics**:
-1. **localStorage Best Practices**
-   - Quota management strategies
-   - Data versioning patterns
-   - Performance implications for large datasets
-   - Browser compatibility (Safari private mode)
+2. **Generate and dispatch research agents**:
+   ```
+   For each unknown in Technical Context:
+     Task: "Research {unknown} for {feature context}"
+   For each technology choice:
+     Task: "Find best practices for {tech} in {domain}"
+   ```
 
-2. **Date Library Migration**
-   - date-fns vs Luxon API mapping
-   - Timezone handling consistency
-   - Performance benchmarks
-   - Breaking change identification
+3. **Consolidate findings** in `research.md` using format:
+   - Decision: [what was chosen]
+   - Rationale: [why chosen]
+   - Alternatives considered: [what else evaluated]
 
-3. **Error Boundary Patterns**
-   - React 19 error boundary best practices
-   - Granularity (root vs component-level)
-   - Error logging strategies
-   - User experience during errors
-
-4. **URL State Management**
-   - Query param serialization formats
-   - Next.js router integration
-   - URL length limits and handling
-   - Browser history management
-
-5. **File Upload Security**
-   - MIME type validation methods
-   - File signature checking
-   - Content Security Policy headers
-   - XSS prevention in Excel data
-
-6. **Performance Optimization**
-   - Single-pass aggregation algorithms
-   - Web Workers for heavy computation
-   - React memoization strategies
-   - Virtual scrolling best practices
-
-**Output**: research.md documenting decisions, rationales, and implementation patterns
+**Output**: research.md with all NEEDS CLARIFICATION resolved
 
 ## Phase 1: Design & Contracts
 *Prerequisites: research.md complete*
 
-1. **Data Model Updates** → `data-model.md`:
-   - **StorageSchema**: localStorage data structure with versioning
-   - **URLParams**: Query parameter schema for sharing
-   - **InsightRule**: Rule definition for automated insights
-   - **ErrorContext**: Error boundary state and logging
-   - **MultiSelectFilter**: Filter state for OR-logic queries
+1. **Extract entities from feature spec** → `data-model.md`:
+   - Entity name, fields, relationships
+   - Validation rules from requirements
+   - State transitions if applicable
 
-2. **Type Definitions** (no API contracts - client-side only):
-   - `StorageQuota`: quota management types
-   - `LoadingState`: skeleton loader states
-   - `KeyboardShortcut`: shortcut definitions
-   - `InsightSeverity`: insight color coding
+2. **Generate API contracts** from functional requirements:
+   - For each user action → endpoint
+   - Use standard REST/GraphQL patterns
+   - Output OpenAPI/GraphQL schema to `/contracts/`
 
-3. **E2E Test Scenarios** → failing tests:
-   - **Persistence Recovery**: Upload → refresh → verify data restored
-   - **Error Boundary**: Simulate crash → verify recovery UI
-   - **URL Sharing**: Apply filters → copy URL → open in new tab → verify state
-   - **Multi-Select**: Select multiple categories → verify OR logic
-   - **Insights Generation**: Upload dataset → verify insights display
-   - **Keyboard Navigation**: Tab through UI → verify focus indicators
+3. **Generate contract tests** from contracts:
+   - One test file per endpoint
+   - Assert request/response schemas
+   - Tests must fail (no implementation yet)
 
-4. **Quickstart Scenarios** → `quickstart.md`:
-   - Manual test steps for each user story
-   - Expected outcomes and validation criteria
-   - Rollback procedures
+4. **Extract test scenarios** from user stories:
+   - Each story → integration test scenario
+   - Quickstart test = story validation steps
 
-5. **Update agent file**:
+5. **Update agent file incrementally** (O(1) operation):
    - Run `.specify/scripts/powershell/update-agent-context.ps1 -AgentType windsurf`
-   - Add: zod, localStorage patterns, error boundaries, URL state
-   - Remove: Luxon references
+     **IMPORTANT**: Execute it exactly as specified above. Do not add or remove any arguments.
+   - If exists: Add only NEW tech from current plan
+   - Preserve manual additions between markers
+   - Update recent changes (keep last 3)
+   - Keep under 150 lines for token efficiency
+   - Output to repository root
 
-**Output**: data-model.md, quickstart.md, 6 new E2E test scenarios, updated WINDSURF.md
+**Output**: data-model.md, /contracts/*, failing tests, quickstart.md, agent-specific file
 
 ## Phase 2: Task Planning Approach
 *This section describes what the /tasks command will do - DO NOT execute during /plan*
 
 **Task Generation Strategy**:
-1. **Setup Tasks** (sequential):
-   - T001: Update dependencies (remove Luxon, add zod)
-   - T002: Enable TypeScript strict mode
-   - T003: Create .env.example and .github/workflows
-
-2. **Critical Fix Tasks** (prioritized by risk):
-   - T004-T008: [P] Infrastructure (types, utilities, hooks)
-   - T009-T013: [P] Library updates (remove Luxon from all lib files)
-   - T014-T018: Component updates (error boundaries, loading states)
-   - T019-T023: [P] Security & performance (upload validation, aggregations)
-
-3. **Improvement Tasks** (after critical fixes stable):
-   - T024-T027: URL state management and sharing
-   - T028-T031: Multi-select filters
-   - T032-T035: Insights panel
-
-4. **Testing & Polish Tasks**:
-   - T036-T041: E2E test updates (6 new scenarios)
-   - T042-T044: Documentation updates
-   - T045: Performance profiling and optimization
+- Load `.specify/templates/tasks-template.md` as base
+- Generate tasks from Phase 1 design docs (contracts, data model, quickstart)
+- Each contract → contract test task [P]
+- Each entity → model creation task [P] 
+- Each user story → integration test task
+- Implementation tasks to make tests pass
 
 **Ordering Strategy**:
-- Dependencies: Setup → Infrastructure → Libraries → Components → Features → Tests
-- Parallel execution: Independent files marked [P]
-- Sequential: Shared files (page.tsx, types/index.ts)
-- Test-first: E2E tests written before implementation where feasible
+- TDD order: Tests before implementation 
+- Dependency order: Models before services before UI
+- Mark [P] for parallel execution (independent files)
 
-**Estimated Output**: 45-50 numbered, dependency-ordered tasks in tasks.md
+**Estimated Output**: 25-30 numbered, ordered tasks in tasks.md
 
 **IMPORTANT**: This phase is executed by the /tasks command, NOT by /plan
 
@@ -296,39 +192,28 @@ sendgrid-dashboard/
 ## Complexity Tracking
 *Fill ONLY if Constitution Check has violations that must be justified*
 
-**Status**: No complexity violations - all changes maintain existing architecture simplicity.
-
-**Rationale**:
-- localStorage is simpler than backend API for MVP
-- Error boundaries are React standard, not over-engineering
-- Removing Luxon reduces complexity (one less dependency)
-- URL state is native Next.js feature, no new library
-- Multi-select uses existing filter patterns
-- Insights are rule-based calculations, not AI/ML complexity
+| Violation | Why Needed | Simpler Alternative Rejected Because |
+|-----------|------------|-------------------------------------|
+| [e.g., 4th project] | [current need] | [why 3 projects insufficient] |
+| [e.g., Repository pattern] | [specific problem] | [why direct DB access insufficient] |
 
 
 ## Progress Tracking
 *This checklist is updated during execution flow*
 
 **Phase Status**:
-- [✅] Phase 0: Research complete (/plan command) - COMPLETE
-- [✅] Phase 1: Design complete (/plan command) - COMPLETE
-- [✅] Phase 2: Task planning approach described (/plan command) - COMPLETE
-- [ ] Phase 3: Tasks generated (/tasks command) - READY
-- [ ] Phase 4: Implementation complete - PENDING
-- [ ] Phase 5: Validation passed - PENDING
+- [ ] Phase 0: Research complete (/plan command)
+- [ ] Phase 1: Design complete (/plan command)
+- [ ] Phase 2: Task planning complete (/plan command - describe approach only)
+- [ ] Phase 3: Tasks generated (/tasks command)
+- [ ] Phase 4: Implementation complete
+- [ ] Phase 5: Validation passed
 
 **Gate Status**:
-- [✅] Initial Constitution Check: PASS
-- [✅] Post-Design Constitution Check: PASS
-- [✅] All NEEDS CLARIFICATION resolved (none present)
-- [✅] Complexity deviations documented (none present)
-
-**Deliverables**:
-- [✅] research.md created (6 research topics documented)
-- [✅] data-model.md created (10+ new type definitions)
-- [✅] quickstart.md created (10 test scenarios)
-- [ ] tasks.md ready for generation via /tasks command
+- [ ] Initial Constitution Check: PASS
+- [ ] Post-Design Constitution Check: PASS
+- [ ] All NEEDS CLARIFICATION resolved
+- [ ] Complexity deviations documented
 
 ---
 *Based on Constitution v2.1.1 - See `/memory/constitution.md`*

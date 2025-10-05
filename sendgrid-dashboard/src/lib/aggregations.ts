@@ -1,4 +1,5 @@
-import { DateTime } from "luxon";
+import { startOfWeek, endOfWeek, startOfMonth } from "date-fns";
+import { formatInTimeZone } from "date-fns-tz";
 import type {
   CategoryAggregate,
   DailyAggregate,
@@ -10,7 +11,7 @@ import type {
 const TIMEZONE = "Australia/Brisbane";
 
 function dateKey(date: Date): string {
-  return DateTime.fromJSDate(date, { zone: TIMEZONE }).toISODate() ?? "";
+  return formatInTimeZone(date, TIMEZONE, "yyyy-MM-dd");
 }
 
 export function computeDailyAggregates(events: EmailEvent[]): DailyAggregate[] {
@@ -152,14 +153,14 @@ export function rollupAggregates(
   >();
 
   for (const entry of aggregates) {
-    const dt = DateTime.fromISO(entry.date, { zone: TIMEZONE });
-    if (!dt.isValid) continue;
+    const date = new Date(entry.date);
+    if (isNaN(date.getTime())) continue;
 
     if (granularity === "weekly") {
-      const start = dt.startOf("week");
-      const end = start.plus({ days: 6 });
-      const sortKey = start.toISODate() ?? entry.date;
-      const label = `${start.toFormat("dd LLL yyyy")} – ${end.toFormat("dd LLL yyyy")}`;
+      const start = startOfWeek(date, { weekStartsOn: 1 });
+      const end = endOfWeek(date, { weekStartsOn: 1 });
+      const sortKey = formatInTimeZone(start, TIMEZONE, "yyyy-MM-dd");
+      const label = `${formatInTimeZone(start, TIMEZONE, "dd LLL yyyy")} – ${formatInTimeZone(end, TIMEZONE, "dd LLL yyyy")}`;
       const group = groupMap.get(sortKey) ?? {
         aggregate: createEmptyAggregate(label),
         sortKey,
@@ -169,9 +170,9 @@ export function rollupAggregates(
       continue;
     }
 
-    const start = dt.startOf("month");
-    const sortKey = start.toISODate() ?? entry.date;
-    const label = start.toFormat("LLLL yyyy");
+    const start = startOfMonth(date);
+    const sortKey = formatInTimeZone(start, TIMEZONE, "yyyy-MM-dd");
+    const label = formatInTimeZone(start, TIMEZONE, "LLLL yyyy");
     const group = groupMap.get(sortKey) ?? {
       aggregate: createEmptyAggregate(label),
       sortKey,

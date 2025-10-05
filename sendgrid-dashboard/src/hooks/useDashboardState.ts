@@ -13,7 +13,9 @@ function createInitialFilters(): DashboardFilters {
 
   return {
     dateRange: [sevenDaysAgo, today],
-    eventType: "all",
+    categories: [],
+    emails: [],
+    eventTypes: [],
   };
 }
 
@@ -28,21 +30,21 @@ function parseFilters(
   partial: Partial<DashboardFilters>
 ): DashboardFilters {
   const dateRange = partial.dateRange ?? filters.dateRange;
-  const category = Object.prototype.hasOwnProperty.call(partial, "category")
-    ? partial.category
-    : filters.category;
-  const email = Object.prototype.hasOwnProperty.call(partial, "email")
-    ? partial.email ?? undefined
-    : filters.email;
-  const eventType = Object.prototype.hasOwnProperty.call(partial, "eventType")
-    ? partial.eventType ?? "all"
-    : filters.eventType ?? "all";
+  const categories = Object.prototype.hasOwnProperty.call(partial, "categories")
+    ? partial.categories ?? []
+    : filters.categories;
+  const emails = Object.prototype.hasOwnProperty.call(partial, "emails")
+    ? partial.emails ?? []
+    : filters.emails;
+  const eventTypes = Object.prototype.hasOwnProperty.call(partial, "eventTypes")
+    ? partial.eventTypes ?? []
+    : filters.eventTypes;
 
   return {
     dateRange: [dateRange[0], dateRange[1]],
-    category,
-    email,
-    eventType,
+    categories,
+    emails,
+    eventTypes,
   } satisfies DashboardFilters;
 }
 

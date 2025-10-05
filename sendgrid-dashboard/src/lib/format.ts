@@ -1,4 +1,4 @@
-import { DateTime } from "luxon";
+import { formatInTimeZone } from "date-fns-tz";
 
 const TIMEZONE = "Australia/Brisbane";
 
@@ -16,10 +16,10 @@ export function formatTrend(value: number): string {
 
 export function formatDate(value: Date | string): string {
   const date = value instanceof Date ? value : new Date(value);
-  return DateTime.fromJSDate(date, { zone: TIMEZONE }).toFormat("dd LLL yyyy");
+  return formatInTimeZone(date, TIMEZONE, "dd LLL yyyy");
 }
 
 export function formatDateTime(value: Date | string): string {
   const date = value instanceof Date ? value : new Date(value);
-  return DateTime.fromJSDate(date, { zone: TIMEZONE }).toFormat("dd LLL yyyy • h:mm a");
+  return formatInTimeZone(date, TIMEZONE, "dd LLL yyyy • h:mm a");
 }

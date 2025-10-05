@@ -1,4 +1,4 @@
-import type { CategoryAggregate, DailyAggregate, EmailEvent } from "@/types";
+import type { CategoryAggregate, DailyAggregate, EmailEvent, EngagementContact, DomainMetrics, BounceWarning } from "@/types";
 
 function createCsvRow(columns: (string | number | null | undefined)[]): string {
   return columns
@@ -113,6 +113,110 @@ export function exportCategoriesCsv(categories: CategoryAggregate[], filename: s
       category.spam_reports,
       category.open_rate.toFixed(2),
       category.click_rate.toFixed(2),
+    ])
+  );
+
+  downloadFile(filename, [header, ...rows].join("\n"));
+}
+
+export function exportEngagementCsv(contacts: EngagementContact[], filename: string) {
+  const header = createCsvRow([
+    "email",
+    "domain",
+    "total_sent",
+    "opens",
+    "clicks",
+    "bounces",
+    "open_rate",
+    "click_rate",
+    "bounce_rate",
+    "engagement_score",
+    "tier",
+    "last_activity",
+    "days_since_last_activity",
+  ]);
+
+  const rows = contacts.map((contact) =>
+    createCsvRow([
+      contact.email,
+      contact.domain,
+      contact.total_sent,
+      contact.opens,
+      contact.clicks,
+      contact.bounces,
+      contact.open_rate.toFixed(1),
+      contact.click_rate.toFixed(1),
+      contact.bounce_rate.toFixed(1),
+      Math.round(contact.engagement_score),
+      contact.tier,
+      contact.last_activity.toISOString(),
+      contact.days_since_last_activity,
+    ])
+  );
+
+  downloadFile(filename, [header, ...rows].join("\n"));
+}
+
+export function exportBounceCsv(warnings: BounceWarning[], filename: string) {
+  const header = createCsvRow([
+    "email",
+    "domain",
+    "bounce_count",
+    "severity",
+    "action_required",
+    "first_bounce",
+    "last_bounce",
+  ]);
+
+  const rows = warnings.map((warning) =>
+    createCsvRow([
+      warning.email,
+      warning.domain,
+      warning.bounce_count,
+      warning.severity,
+      warning.action_required,
+      warning.first_bounce.toISOString(),
+      warning.last_bounce.toISOString(),
+    ])
+  );
+
+  downloadFile(filename, [header, ...rows].join("\n"));
+}
+
+export function exportDomainCsv(domains: DomainMetrics[], filename: string) {
+  const header = createCsvRow([
+    "domain",
+    "unique_contacts",
+    "top_contacts",
+    "total_sent",
+    "total_opens",
+    "total_clicks",
+    "total_bounces",
+    "avg_open_rate",
+    "avg_click_rate",
+    "bounce_rate",
+    "engagement_score",
+    "trend",
+    "first_contact",
+    "last_activity",
+  ]);
+
+  const rows = domains.map((domain) =>
+    createCsvRow([
+      domain.domain,
+      domain.unique_contacts,
+      domain.top_contacts.join("; "),
+      domain.total_sent,
+      domain.total_opens,
+      domain.total_clicks,
+      domain.total_bounces,
+      domain.avg_open_rate.toFixed(1),
+      domain.avg_click_rate.toFixed(1),
+      domain.bounce_rate.toFixed(1),
+      domain.engagement_score ? Math.round(domain.engagement_score) : "",
+      domain.trend,
+      domain.first_contact.toISOString(),
+      domain.last_activity.toISOString(),
     ])
   );
 

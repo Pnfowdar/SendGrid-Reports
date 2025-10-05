@@ -11,7 +11,7 @@ import {
   YAxis,
 } from "recharts";
 import { useMemo, useState } from "react";
-import { DateTime } from "luxon";
+import { format } from "date-fns";
 import { formatDate } from "@/lib/format";
 
 interface TimeseriesPoint {
@@ -131,7 +131,7 @@ export function StatsCharts({ data, isLoading }: StatsChartsProps) {
                   border: "1px solid rgba(148,163,184,0.35)",
                 }}
                 labelFormatter={(label: string) =>
-                  DateTime.fromISO(label).toFormat("dd LLL yyyy")
+                  format(new Date(label), "dd LLL yyyy")
                 }
                 labelStyle={{ color: "#e2e8f0" }}
                 itemStyle={{ color: "#e2e8f0" }}

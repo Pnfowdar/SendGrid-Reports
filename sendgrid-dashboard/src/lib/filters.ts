@@ -1,4 +1,5 @@
-import { DateTime } from "luxon";
+import { startOfDay, endOfDay } from "date-fns";
+import { toZonedTime } from "date-fns-tz";
 import type { DashboardFilters, EmailEvent } from "@/types";
 
 const TIMEZONE = "Australia/Brisbane";
@@ -8,17 +9,17 @@ function normalizeEmail(value?: string): string {
 }
 
 function isWithinRange(date: Date, [start, end]: DashboardFilters["dateRange"]): boolean {
-  const zoned = DateTime.fromJSDate(date, { zone: TIMEZONE });
+  const zoned = toZonedTime(date, TIMEZONE);
 
   if (start) {
-    const startDay = DateTime.fromJSDate(start, { zone: TIMEZONE }).startOf("day");
+    const startDay = startOfDay(toZonedTime(start, TIMEZONE));
     if (zoned < startDay) {
       return false;
     }
   }
 
   if (end) {
-    const endDay = DateTime.fromJSDate(end, { zone: TIMEZONE }).endOf("day");
+    const endDay = endOfDay(toZonedTime(end, TIMEZONE));
     if (zoned > endDay) {
       return false;
     }
@@ -31,30 +32,40 @@ export function filterEvents(
   events: EmailEvent[],
   filters: DashboardFilters
 ): EmailEvent[] {
-  const { dateRange, eventType, email, category } = filters;
-  const normalizedEmail = normalizeEmail(email);
-  const normalizedCategory = category?.toLowerCase().trim();
+  const { dateRange, eventTypes, emails, categories } = filters;
 
   return events.filter((event) => {
+    // Date range filter
     if (!isWithinRange(event.timestamp, dateRange)) {
       return false;
     }
 
-    if (eventType && eventType !== "all" && event.event !== eventType) {
+    // Event type filter (OR logic)
+    if (eventTypes.length > 0 && !eventTypes.includes(event.event)) {
       return false;
     }
 
-    if (normalizedEmail && !normalizeEmail(event.email).includes(normalizedEmail)) {
-      return false;
+    // Email filter (OR logic - match any search term)
+    if (emails.length > 0) {
+      const normalizedEventEmail = normalizeEmail(event.email);
+      const matchesAnyEmail = emails.some((emailSearch) => 
+        normalizedEventEmail.includes(normalizeEmail(emailSearch))
+      );
+      if (!matchesAnyEmail) {
+        return false;
+      }
     }
 
-    if (normalizedCategory) {
-      const categories = event.category.length ? event.category : ["Uncategorized"];
-      const matchesCategory = categories.some(
-        (value) => value.toLowerCase().trim() === normalizedCategory
+    // Category filter (OR logic)
+    if (categories.length > 0) {
+      const eventCategories = event.category.length ? event.category : ["Uncategorized"];
+      const normalizedFilterCategories = categories.map(c => c.toLowerCase().trim());
+      
+      const matchesAnyCategory = eventCategories.some((eventCat) =>
+        normalizedFilterCategories.includes(eventCat.toLowerCase().trim())
       );
 
-      if (!matchesCategory) {
+      if (!matchesAnyCategory) {
         return false;
       }
     }
