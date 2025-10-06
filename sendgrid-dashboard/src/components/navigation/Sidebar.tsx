@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import type { LucideIcon } from "lucide-react";
 import { 
   BarChart3, 
   Target, 
@@ -28,7 +29,7 @@ interface SidebarProps {
   sections: SidebarSection[];
 }
 
-const iconMap: Record<string, any> = {
+const iconMap: Record<string, LucideIcon> = {
   "filters": Filter,
   "insights": Target,
   "bounce-warnings": AlertCircle,

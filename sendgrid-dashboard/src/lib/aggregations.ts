@@ -1,4 +1,4 @@
-import { startOfWeek, endOfWeek, startOfMonth } from "date-fns";
+import { startOfWeek, startOfMonth } from "date-fns";
 import { formatInTimeZone } from "date-fns-tz";
 import type {
   CategoryAggregate,

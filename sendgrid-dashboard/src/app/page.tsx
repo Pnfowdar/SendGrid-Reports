@@ -15,7 +15,6 @@ import { StatsCharts } from "@/components/stats-charts/StatsCharts";
 import { FunnelChart } from "@/components/funnel/FunnelChart";
 import { CategoriesTable } from "@/components/categories/CategoriesTable";
 import { EmailSequenceCard } from "@/components/sequence/EmailSequenceCard";
-import { ExportButton } from "@/components/export/ExportButton";
 import { DashboardShell } from "@/components/layout/DashboardShell";
 import { ScrollToTop } from "@/components/navigation/ScrollToTop";
 import { Sidebar } from "@/components/navigation/Sidebar";
@@ -32,11 +31,6 @@ import {
   type AggregateGranularity,
 } from "@/lib/aggregations";
 import { filterEvents, getAvailableCategories } from "@/lib/filters";
-import {
-  exportActivityCsv,
-  exportCategoriesCsv,
-  exportFiguresCsv,
-} from "@/lib/export";
 import type { CategoryMetricKey, EmailEvent } from "@/types";
 
 export default function Home() {
@@ -109,18 +103,6 @@ export default function Home() {
   const handleFiltersReset = () => {
     dispatch({ type: "RESET" });
     setGranularity("daily");
-  };
-
-  const exportActivity = async () => {
-    exportActivityCsv(filteredEvents, createFilename("activity"));
-  };
-
-  const exportFigures = async () => {
-    exportFiguresCsv(figures, createFilename(`figures_${granularity}`));
-  };
-
-  const exportCategories = async () => {
-    exportCategoriesCsv(categoryAggregates, createFilename("categories"));
   };
 
   const sections = [
@@ -288,7 +270,7 @@ export default function Home() {
             <EmailSequenceCard events={filteredEvents} dateRange={state.filters.dateRange} />
           </div>
           <div id="activity">
-            <ActivityFeed events={filteredEvents} onRequestExport={exportActivity} />
+            <ActivityFeed events={filteredEvents} />
           </div>
           <div id="categories">
             <CategoriesTable
