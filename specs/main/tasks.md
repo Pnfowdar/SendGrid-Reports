@@ -8,18 +8,29 @@
 
 ## Task Execution Guide
 
-**Dependency Order**: Setup → Types → Libraries → APIs → Components → Pages → Tests  
+**Dependency Order**: Setup → Types → Libraries → APIs → Components → Pages → UX Enhancements → Tests  
 **Parallelization**: Tasks marked [P] can run in parallel within their group  
 **Autonomous Execution**: All tasks use Supabase MCP, MultiEdit, and run_command tools
+
+**New Requirements (Added 2025-10-06) - CLARIFIED**:
+- ✅ 30-day rolling context: Display counts from filtered dates, rates from 30-day prior context (Q1: Option C)
+- ✅ Cross-table metrics: Horizontal scroll with responsive column sizing (Q2: Option B)
+- ✅ Refresh strategy: Always fetch fresh data, incremental append by unique_id (Q3: Option A + incremental)
+- ✅ Hamburger menu: Fixed top-left corner (Q4: Option A)
+- ✅ Performance: No fallback, calculate once and persist until refresh (Q5: Option A + caching)
+- Header reorganization (move controls to top-right)
+- Remove title box from Individuals/Companies pages
+- Scroll-to-top button (bottom-right)
 
 ---
 
 ## Phase 1: Setup & Dependencies (Sequential)
 
-### T001: Update Package Dependencies
+### T001: ✅ Update Package Dependencies [COMPLETE]
 **File**: `d:\Projects\SendGrid-Reporting\sendgrid-dashboard\package.json`  
 **Action**: Remove Luxon, add date-fns-tz  
-**Dependencies**: None
+**Dependencies**: None  
+**Status**: Already complete - date-fns-tz@3.2.0 installed, Luxon removed
 
 ```bash
 # Remove Luxon
@@ -908,19 +919,446 @@ export function useDomainMetrics(trend?: string, minContacts: number = 3) {
 
 ---
 
+## Phase 11: UX Enhancements - 30-Day Context & Data Persistence
+
+### T036: Create lib/context-window.ts
+**File**: `d:\Projects\SendGrid-Reporting\sendgrid-dashboard\src\lib\context-window.ts`  
+**Dependencies**: T009-T010  
+**Tool**: write_to_file
+
+**Functions**:
+- `get30DayContextWindow(events, dateRange)` - Extract 30-day context events
+- `applyContextToSequence(filteredEvents, contextEvents)` - Apply context to email sequences
+- `calculate30DayMetrics(events)` - Calculate metrics using 30-day window
+
+```typescript
+import { subDays, isWithinInterval } from "date-fns";
+import type { EmailEvent } from "@/types";
+
+export function get30DayContextWindow(
+  allEvents: EmailEvent[],
+  dateRange: [Date | null, Date | null]
+): EmailEvent[] {
+  // Get 30 days before the filter start date
+  const contextStart = dateRange[0] 
+    ? subDays(dateRange[0], 30)
+    : subDays(new Date(), 30);
+  
+  const contextEnd = dateRange[1] ?? new Date();
+  
+  return allEvents.filter(event => 
+    isWithinInterval(event.timestamp, { start: contextStart, end: contextEnd })
+  );
+}
+
+export function applyContextToSequence(
+  filteredEvents: EmailEvent[],
+  contextEvents: EmailEvent[]
+) {
+  // Use contextEvents for sequence calculations
+  // Return both filtered count and context-based sequence position
+  return {
+    displayEvents: filteredEvents,
+    sequenceContext: contextEvents,
+  };
+}
+```
+
+**Verification**: Context window correctly calculates 30-day periods
+
+---
+
+### T037: Create lib/data-cache.ts
+**File**: `d:\Projects\SendGrid-Reporting\sendgrid-dashboard\src\lib\data-cache.ts`  
+**Dependencies**: T009-T010  
+**Tool**: write_to_file
+
+**Functions**:
+- `saveDataCache(data)` - Save to sessionStorage
+- `loadDataCache()` - Load from sessionStorage
+- `isCacheStale(loadedAt, maxAgeHours)` - Check 12-hour staleness
+- `clearDataCache()` - Clear cache
+- `save30DayContext(context)` - Cache calculated context metrics
+- `load30DayContext()` - Retrieve cached context metrics
+
+```typescript
+import type { EmailEvent } from "@/types";
+
+const CACHE_KEY = "sendgrid_data_cache";
+const CACHE_VERSION = "v1";
+
+export interface DataCache {
+  version: string;
+  events: EmailEvent[];
+  loadedAt: string; // ISO timestamp
+  lastUniqueId: number | null;
+}
+
+export function saveDataCache(data: Omit<DataCache, "version">): void {
+  try {
+    const cache: DataCache = { ...data, version: CACHE_VERSION };
+    sessionStorage.setItem(CACHE_KEY, JSON.stringify(cache));
+  } catch (err) {
+    console.warn("Failed to save data cache:", err);
+  }
+}
+
+export function loadDataCache(): DataCache | null {
+  try {
+    const cached = sessionStorage.getItem(CACHE_KEY);
+    if (!cached) return null;
+    
+    const data: DataCache = JSON.parse(cached);
+    if (data.version !== CACHE_VERSION) {
+      clearDataCache();
+      return null;
+    }
+    
+    // Rehydrate Date objects
+    data.events = data.events.map(e => ({
+      ...e,
+      timestamp: new Date(e.timestamp),
+    }));
+    
+    return data;
+  } catch (err) {
+    console.warn("Failed to load data cache:", err);
+    return null;
+  }
+}
+
+export function isCacheStale(loadedAt: string, maxAgeHours: number = 12): boolean {
+  const loaded = new Date(loadedAt);
+  const now = new Date();
+  const ageHours = (now.getTime() - loaded.getTime()) / (1000 * 60 * 60);
+  return ageHours >= maxAgeHours;
+}
+
+export function clearDataCache(): void {
+  sessionStorage.removeItem(CACHE_KEY);
+}
+```
+
+**Verification**: Cache saves/loads correctly, staleness check works
+
+---
+
+### T038: Update hooks/useSupabaseEvents.ts for Data Persistence
+**File**: `d:\Projects\SendGrid-Reporting\sendgrid-dashboard\src\hooks\useSupabaseEvents.ts`  
+**Dependencies**: T037  
+**Tool**: Edit
+
+**Changes**:
+1. Import data-cache functions
+2. On mount, check cache first before fetching
+3. Only fetch if cache missing or stale (>12 hours)
+4. Manual refresh: ALWAYS fetch new data using WHERE unique_id > lastUniqueId (incremental)
+5. Append new events to existing cache (merge by unique_id, sort by timestamp)
+6. Update lastUniqueId after successful fetch
+7. Reset 12-hour staleness timer on manual refresh
+
+**Verification**: Data persists across navigation, only refetches when stale
+
+---
+
+### T039: Update lib/aggregations.ts for 30-Day Context
+**File**: `d:\Projects\SendGrid-Reporting\sendgrid-dashboard\src\lib\aggregations.ts`  
+**Dependencies**: T036  
+**Tool**: Edit
+
+**Changes**:
+1. Add optional `contextEvents` parameter to aggregation functions
+2. Calculate rates (open_rate, click_rate, bounce_rate) using contextEvents
+3. Calculate counts (total opens, clicks, bounces) using filteredEvents
+4. Cache calculated context metrics in sessionStorage to avoid recalculation
+5. Load cached context if available and still valid (until next refresh)
+6. Email sequences use contextEvents for day-spacing analysis
+
+**Example**:
+```typescript
+export function computeEmailSequence(
+  filteredEvents: EmailEvent[],
+  contextEvents?: EmailEvent[] // 30-day context
+) {
+  const eventsToAnalyze = contextEvents ?? filteredEvents;
+  // Sequence logic uses eventsToAnalyze
+  // But returns counts from filteredEvents for display
+}
+```
+
+**Verification**: Sequences calculated correctly with 30-day context
+
+---
+
+## Phase 12: Cross-Table Metrics Enhancement
+
+### T040: [P] Update Individuals Page - Top Openers Table
+**File**: `d:\Projects\SendGrid-Reporting\sendgrid-dashboard\src\app\individuals\page.tsx`  
+**Dependencies**: T009  
+**Tool**: Edit
+
+**Changes**:
+1. Add Clicks and Click Rate columns to Top Openers table
+2. Implement horizontal scroll with responsive column widths (min-width on columns)
+3. Table becomes scrollable on smaller screens, preserving all columns
+4. Update export to include new columns
+
+**Verification**: Top Openers shows Opens, Clicks, Click Rate
+
+---
+
+### T041: [P] Update Individuals Page - Top Clickers Table
+**File**: `d:\Projects\SendGrid-Reporting\sendgrid-dashboard\src\app\individuals\page.tsx`  
+**Dependencies**: T009  
+**Tool**: Edit
+
+**Changes**:
+1. Add Opens and Open Rate columns to Top Clickers table
+2. Implement horizontal scroll with responsive column widths (min-width on columns)
+3. Table becomes scrollable on smaller screens, preserving all columns
+4. Update export to include new columns
+
+**Verification**: Top Clickers shows Clicks, Opens, Open Rate
+
+---
+
+### T042: [P] Update Individuals Page - Top Engaged Table
+**File**: `d:\Projects\SendGrid-Reporting\sendgrid-dashboard\src\app\individuals\page.tsx`  
+**Dependencies**: T009  
+**Tool**: Edit
+
+**Changes**:
+1. Show all metrics: Opens, Open Rate, Clicks, Click Rate, Engagement Score
+2. Ensure table remains readable with all columns
+3. Update export to include all metrics
+
+**Verification**: Top Engaged shows complete metric set
+
+---
+
+## Phase 13: Header Reorganization & Navigation UX
+
+### T043: Update DashboardShell - Reorganize Header
+**File**: `d:\Projects\SendGrid-Reporting\sendgrid-dashboard\src\components\layout\DashboardShell.tsx`  
+**Dependencies**: None  
+**Tool**: Edit
+
+**Changes**:
+1. Move "# events loaded", "Last updated", "Sign out" to top-right header
+2. Add "Refresh Data" button to top-right
+3. Keep navigation tabs on left side
+4. Accept `onRefresh` prop for refresh button
+
+**Verification**: Header shows streamlined layout with controls in top-right
+
+---
+
+### T044: Update Individuals/Companies Pages - Remove Title Box
+**File**: Multiple files  
+**Dependencies**: T043  
+**Tool**: MultiEdit
+
+**Files to modify**:
+- `d:\Projects\SendGrid-Reporting\sendgrid-dashboard\src\app\individuals\page.tsx`
+- `d:\Projects\SendGrid-Reporting\sendgrid-dashboard\src\app\companies\page.tsx`
+
+**Changes**:
+1. Remove "SendGrid Deliverability & Engagement Dashboard" title section
+2. Keep only functional content (tables, filters, etc.)
+3. Ensure header controls still visible (inherited from DashboardShell)
+
+**Verification**: Individuals and Companies pages have clean layout without duplicate title
+
+---
+
+### T045: Create components/navigation/ScrollToTop.tsx
+**File**: `d:\Projects\SendGrid-Reporting\sendgrid-dashboard\src\components\navigation\ScrollToTop.tsx`  
+**Dependencies**: None  
+**Tool**: write_to_file
+
+**Component**: Scroll-to-top button
+- Fixed position bottom-right
+- Appears after scrolling 400px down
+- Smooth scroll to top on click
+- Circular icon button with up arrow
+
+```typescript
+"use client";
+
+import { useState, useEffect } from "react";
+import { ArrowUp } from "lucide-react";
+import { cn } from "@/utils/cn";
+
+export function ScrollToTop() {
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setVisible(window.scrollY > 400);
+    };
+
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  return (
+    <button
+      onClick={scrollToTop}
+      className={cn(
+        "fixed bottom-6 right-6 z-50 flex h-12 w-12 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition-all hover:scale-110 hover:shadow-xl",
+        visible ? "opacity-100" : "opacity-0 pointer-events-none"
+      )}
+      aria-label="Scroll to top"
+    >
+      <ArrowUp className="h-5 w-5" />
+    </button>
+  );
+}
+```
+
+**Verification**: Button appears after scrolling, scrolls to top smoothly
+
+---
+
+### T046: Create components/navigation/HamburgerMenu.tsx
+**File**: `d:\Projects\SendGrid-Reporting\sendgrid-dashboard\src\components\navigation\HamburgerMenu.tsx`  
+**Dependencies**: None  
+**Tool**: write_to_file
+
+**Component**: Hamburger menu for section navigation
+- Fixed position top-left or integrated in header
+- Lists all page sections with anchors
+- Smooth scroll to section on click
+- Different sections per page (Dashboard vs. Individuals vs. Companies)
+
+```typescript
+"use client";
+
+import { useState } from "react";
+import { Menu, X } from "lucide-react";
+import { cn } from "@/utils/cn";
+
+interface Section {
+  id: string;
+  label: string;
+}
+
+interface HamburgerMenuProps {
+  sections: Section[];
+}
+
+export function HamburgerMenu({ sections }: HamburgerMenuProps) {
+  const [open, setOpen] = useState(false);
+
+  const scrollToSection = (id: string) => {
+    const element = document.getElementById(id);
+    if (element) {
+      element.scrollIntoView({ behavior: "smooth", block: "start" });
+      setOpen(false);
+    }
+  };
+
+  return (
+    <>
+      <button
+        onClick={() => setOpen(!open)}
+        className="fixed left-4 top-20 z-50 flex h-10 w-10 items-center justify-center rounded-lg bg-card/90 border border-border/60 text-foreground shadow-lg backdrop-blur transition hover:bg-card"
+        aria-label="Toggle section navigation"
+      >
+        {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+      </button>
+
+      {open && (
+        <>
+          <div
+            className="fixed inset-0 z-40 bg-background/80 backdrop-blur-sm"
+            onClick={() => setOpen(false)}
+          />
+          <nav className="fixed left-4 top-32 z-50 w-64 rounded-xl border border-border/60 bg-card/95 p-4 shadow-xl backdrop-blur">
+            <h3 className="mb-3 text-sm font-semibold text-foreground">Jump to Section</h3>
+            <ul className="space-y-2">
+              {sections.map((section) => (
+                <li key={section.id}>
+                  <button
+                    onClick={() => scrollToSection(section.id)}
+                    className="w-full rounded-lg px-3 py-2 text-left text-sm text-muted-foreground transition hover:bg-primary/10 hover:text-primary"
+                  >
+                    {section.label}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </nav>
+        </>
+      )}
+    </>
+  );
+}
+```
+
+**Verification**: Menu opens, sections scroll correctly
+
+---
+
+### T047: Integrate ScrollToTop and HamburgerMenu into Pages
+**Files**: All page files  
+**Dependencies**: T045, T046  
+**Tool**: MultiEdit
+
+**Files to modify**:
+- `d:\Projects\SendGrid-Reporting\sendgrid-dashboard\src\app\page.tsx`
+- `d:\Projects\SendGrid-Reporting\sendgrid-dashboard\src\app\individuals\page.tsx`
+- `d:\Projects\SendGrid-Reporting\sendgrid-dashboard\src\app\companies\page.tsx`
+
+**Changes**:
+1. Import ScrollToTop and HamburgerMenu
+2. Define section anchors (add `id` attributes to major sections)
+3. Pass section list to HamburgerMenu based on page
+4. Add ScrollToTop component at root level
+
+**Example sections**:
+- Dashboard: Filters, Insights, Metrics, Charts, Figures, Funnel, Sequences, Activity, Categories
+- Individuals: Filters, Summary, Top Openers, Top Clickers, Hot Leads, Top Engaged
+- Companies: Filters, Summary, Hot Leads, Warm Leads, At-Risk Domains
+
+**Verification**: Navigation works on all pages, scroll-to-top visible
+
+---
+
+### T048: Update EmailSequenceCard for 30-Day Context
+**File**: `d:\Projects\SendGrid-Reporting\sendgrid-dashboard\src\components\sequence\EmailSequenceCard.tsx`  
+**Dependencies**: T036, T039  
+**Tool**: Edit
+
+**Changes**:
+1. Accept `contextEvents` prop (30-day window)
+2. Use contextEvents for sequence calculation logic
+3. Display filtered event counts but show sequence position from context
+4. Add tooltip explaining 30-day context window
+
+**Verification**: Email sequences show accurate day-spacing using 30-day context
+
+---
+
 ## Execution Summary
 
-**Total Tasks**: 35  
-**Estimated Time**: 6-8 hours (autonomous execution)  
-**Critical Path**: T001 → T002 → T004-T008 → T009-T010 → T014-T017 → T027 → T029
+**Total Tasks**: 48 (original 35 + 13 UX enhancements)  
+**Estimated Time**: 9-12 hours (autonomous execution)  
+**Critical Path**: T001 → T002 → T004-T008 → T009-T010 → T036-T037 → T038 → T043 → T045-T047
 
 **Parallel Execution Groups**:
 - Group 1 (after T001): T004, T005, T006, T007, T008 (date migration)
-- Group 2 (after T009-T010): T011, T012, T013 (utilities)
+- Group 2 (after T009-T010): T011, T012, T013, T036, T037 (utilities)
 - Group 3 (after T013): T014, T015, T016, T017 (APIs)
 - Group 4 (after T017): T018, T019 (hooks)
 - Group 5 (after T020): T021, T022, T023, T024 (components)
-- Group 6 (final): T032, T033 (tests)
+- Group 6 (after T039): T040, T041, T042 (cross-table metrics)
+- Group 7 (after T043): T045, T046 (navigation components)
+- Group 8 (final): T032, T033 (tests)
 
 **Success Criteria**:
 - ✅ All tasks complete without errors
@@ -929,6 +1367,11 @@ export function useDomainMetrics(trend?: string, minContacts: number = 3) {
 - ✅ API response times <500ms
 - ✅ No TypeScript errors
 - ✅ Supabase migration applied successfully
+- ✅ 30-day context window performs <200ms on 10k events
+- ✅ Data persistence works across navigation (12-hour cache)
+- ✅ Cross-table metrics display correctly on all pages
+- ✅ Header reorganization complete on all pages
+- ✅ Scroll-to-top and hamburger menu functional
 
 ---
 **Ready for Autonomous Execution** | **Use Supabase MCP, MultiEdit, and run_command**

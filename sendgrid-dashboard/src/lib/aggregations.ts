@@ -103,9 +103,9 @@ export function computeDailyAggregates(events: EmailEvent[]): DailyAggregate[] {
 
 export type AggregateGranularity = "daily" | "weekly" | "monthly";
 
-function createEmptyAggregate(label: string): DailyAggregate {
+function createEmptyAggregate(dateKey: string): DailyAggregate {
   return {
-    date: label,
+    date: dateKey,
     requests: 0,
     delivered: 0,
     opens: 0,
@@ -158,11 +158,9 @@ export function rollupAggregates(
 
     if (granularity === "weekly") {
       const start = startOfWeek(date, { weekStartsOn: 1 });
-      const end = endOfWeek(date, { weekStartsOn: 1 });
       const sortKey = formatInTimeZone(start, TIMEZONE, "yyyy-MM-dd");
-      const label = `${formatInTimeZone(start, TIMEZONE, "dd LLL yyyy")} – ${formatInTimeZone(end, TIMEZONE, "dd LLL yyyy")}`;
       const group = groupMap.get(sortKey) ?? {
-        aggregate: createEmptyAggregate(label),
+        aggregate: createEmptyAggregate(sortKey),
         sortKey,
       };
       accumulate(group.aggregate, entry);
@@ -172,9 +170,8 @@ export function rollupAggregates(
 
     const start = startOfMonth(date);
     const sortKey = formatInTimeZone(start, TIMEZONE, "yyyy-MM-dd");
-    const label = formatInTimeZone(start, TIMEZONE, "LLLL yyyy");
     const group = groupMap.get(sortKey) ?? {
-      aggregate: createEmptyAggregate(label),
+      aggregate: createEmptyAggregate(sortKey),
       sortKey,
     };
     accumulate(group.aggregate, entry);
@@ -298,19 +295,18 @@ export function computeKpiMetrics(events: EmailEvent[]): KPIMetrics {
 }
 
 export function computeFunnelStages(events: EmailEvent[]): FunnelStage[] {
-  const sent = new Set<string>();
-  const delivered = new Set<string>();
+  let sentCount = 0;
+  let deliveredCount = 0;
   const opened = new Set<string>();
   const clicked = new Set<string>();
 
   for (const event of events) {
-    const key = event.smtp_id || event.email;
     switch (event.event) {
       case "processed":
-        sent.add(key);
+        sentCount++;
         break;
       case "delivered":
-        delivered.add(key);
+        deliveredCount++;
         break;
       case "open":
         opened.add(event.email.toLowerCase());
@@ -323,8 +319,8 @@ export function computeFunnelStages(events: EmailEvent[]): FunnelStage[] {
     }
   }
 
-  const sentCount = sent.size || delivered.size || events.length;
-  const deliveredCount = delivered.size;
+  // Fallback if no processed events
+  if (sentCount === 0) sentCount = deliveredCount || events.length;
   const uniqueOpenedCount = opened.size;
   const uniqueClickedCount = clicked.size;
 
@@ -450,4 +446,76 @@ export function computeTimeseries(events: EmailEvent[]): TimeseriesPoint[] {
   }
 
   return Array.from(map.values()).sort((a, b) => a.date.localeCompare(b.date));
+}
+
+export function rollupTimeseries(
+  timeseries: TimeseriesPoint[],
+  granularity: AggregateGranularity,
+  excludeWeekends: boolean = false
+): TimeseriesPoint[] {
+  let filtered = timeseries;
+  
+  // Filter weekends if requested
+  if (excludeWeekends) {
+    filtered = timeseries.filter((point) => {
+      const date = new Date(point.date);
+      const dayOfWeek = date.getDay();
+      return dayOfWeek !== 0 && dayOfWeek !== 6; // 0 = Sunday, 6 = Saturday
+    });
+  }
+
+  if (granularity === "daily") {
+    return filtered;
+  }
+
+  const groupMap = new Map<string, { point: TimeseriesPoint; sortKey: string }>();
+
+  for (const entry of filtered) {
+    const date = new Date(entry.date);
+    if (isNaN(date.getTime())) continue;
+
+    let sortKey: string;
+    if (granularity === "weekly") {
+      const start = startOfWeek(date, { weekStartsOn: 1 });
+      sortKey = formatInTimeZone(start, TIMEZONE, "yyyy-MM-dd");
+    } else {
+      const start = startOfMonth(date);
+      sortKey = formatInTimeZone(start, TIMEZONE, "yyyy-MM-dd");
+    }
+
+    const group = groupMap.get(sortKey) ?? {
+      point: {
+        date: sortKey,
+        processed: 0,
+        delivered: 0,
+        opens: 0,
+        unique_opens: 0,
+        clicks: 0,
+        unique_clicks: 0,
+        bounces: 0,
+        unsubscribes: 0,
+        spam_reports: 0,
+        blocks: 0,
+        drops: 0,
+      },
+      sortKey,
+    };
+
+    group.point.processed += entry.processed;
+    group.point.delivered += entry.delivered;
+    group.point.opens += entry.opens;
+    group.point.unique_opens += entry.unique_opens;
+    group.point.clicks += entry.clicks;
+    group.point.unique_clicks += entry.unique_clicks;
+    group.point.bounces += entry.bounces;
+    group.point.unsubscribes += entry.unsubscribes;
+    group.point.spam_reports += entry.spam_reports;
+    group.point.blocks += entry.blocks;
+    group.point.drops += entry.drops;
+    groupMap.set(sortKey, group);
+  }
+
+  return Array.from(groupMap.values())
+    .sort((a, b) => a.sortKey.localeCompare(b.sortKey))
+    .map((entry) => entry.point);
 }

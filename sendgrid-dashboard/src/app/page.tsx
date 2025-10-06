@@ -17,6 +17,8 @@ import { CategoriesTable } from "@/components/categories/CategoriesTable";
 import { EmailSequenceCard } from "@/components/sequence/EmailSequenceCard";
 import { ExportButton } from "@/components/export/ExportButton";
 import { DashboardShell } from "@/components/layout/DashboardShell";
+import { ScrollToTop } from "@/components/navigation/ScrollToTop";
+import { Sidebar } from "@/components/navigation/Sidebar";
 import { useDashboardState } from "@/hooks/useDashboardState";
 import { useSupabaseEvents } from "@/hooks/useSupabaseEvents";
 import {
@@ -26,6 +28,7 @@ import {
   computeKpiMetrics,
   computeTimeseries,
   rollupAggregates,
+  rollupTimeseries,
   type AggregateGranularity,
 } from "@/lib/aggregations";
 import { filterEvents, getAvailableCategories } from "@/lib/filters";
@@ -39,6 +42,8 @@ import type { CategoryMetricKey, EmailEvent } from "@/types";
 export default function Home() {
   const [state, dispatch] = useDashboardState();
   const [granularity, setGranularity] = useState<AggregateGranularity>("daily");
+  const [chartGranularity, setChartGranularity] = useState<AggregateGranularity>("daily");
+  const [excludeWeekends, setExcludeWeekends] = useState(false);
   const [sortKey, setSortKey] = useState<CategoryMetricKey>("unique_opens");
   const [showStickyFilters, setShowStickyFilters] = useState(false);
   const filterSectionRef = useRef<HTMLDivElement>(null);
@@ -91,7 +96,11 @@ export default function Home() {
   const figures = useMemo(() => rollupAggregates(dailyAggregates, granularity), [dailyAggregates, granularity]);
   const metrics = useMemo(() => computeKpiMetrics(filteredEvents), [filteredEvents]);
   const funnelStages = useMemo(() => computeFunnelStages(filteredEvents), [filteredEvents]);
-  const timeseries = useMemo(() => computeTimeseries(filteredEvents), [filteredEvents]);
+  const rawTimeseries = useMemo(() => computeTimeseries(filteredEvents), [filteredEvents]);
+  const timeseries = useMemo(
+    () => rollupTimeseries(rawTimeseries, chartGranularity, excludeWeekends),
+    [rawTimeseries, chartGranularity, excludeWeekends]
+  );
   const categoryAggregates = useMemo(() => {
     const aggregates = computeCategoryAggregates(filteredEvents);
     return aggregates.sort((a, b) => b[sortKey] - a[sortKey]);
@@ -114,12 +123,30 @@ export default function Home() {
     exportCategoriesCsv(categoryAggregates, createFilename("categories"));
   };
 
+  const sections = [
+    { id: "filters", label: "Filters & Controls", icon: "filters" },
+    { id: "insights", label: "Insights", icon: "insights" },
+    { id: "bounce-warnings", label: "Bounce Warnings", icon: "bounce-warnings" },
+    { id: "metrics", label: "Metrics", icon: "metrics" },
+    { id: "charts", label: "Charts", icon: "charts" },
+    { id: "figures", label: "Figures", icon: "figures" },
+    { id: "funnel", label: "Funnel", icon: "funnel" },
+    { id: "sequences", label: "Email Sequences", icon: "sequences" },
+    { id: "activity", label: "Activity Feed", icon: "activity" },
+    { id: "categories", label: "Categories", icon: "categories" },
+  ];
+
   return (
-    <DashboardShell
-      eventsCount={state.events.length}
-      lastUpdated={state.lastUpdated}
-    >
-      <div className="grid gap-4 sm:gap-6 md:gap-8 w-full overflow-hidden">
+    <>
+      <Sidebar sections={sections} />
+      <ScrollToTop />
+      <DashboardShell
+        eventsCount={state.events.length}
+        lastUpdated={state.lastUpdated}
+        onRefresh={refreshData}
+        isRefreshing={isRefreshing}
+      >
+        <div className="grid gap-4 sm:gap-6 md:gap-8 w-full overflow-hidden">
         {isLoading && (
           <section className="rounded-2xl sm:rounded-3xl border border-border/60 bg-card/60 p-8 shadow-floating-card text-center">
             <div className="flex flex-col items-center gap-4">
@@ -144,27 +171,11 @@ export default function Home() {
           </section>
         )}
 
-        <div ref={filterSectionRef}>
+        <div ref={filterSectionRef} id="filters">
           <section className="rounded-2xl sm:rounded-3xl border border-border/60 bg-card/60 p-4 sm:p-6 shadow-floating-card">
             <div className="flex flex-col gap-3 sm:gap-2 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <h2 className="text-base sm:text-lg font-semibold text-card-foreground">Filters & Controls</h2>
-                <p className="text-xs sm:text-sm text-muted-foreground">
-                  Adjust filters to focus on specific recipients, event types, campaigns, or date ranges.
-                </p>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <button
-                  onClick={refreshData}
-                  disabled={isRefreshing || isLoading}
-                  className="inline-flex items-center gap-2 rounded-lg border border-border/60 bg-card/60 px-3 py-2 text-sm font-semibold text-card-foreground transition hover:bg-card/80 disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  <RefreshCw className={isRefreshing ? "h-4 w-4 animate-spin" : "h-4 w-4"} />
-                  {isRefreshing ? "Refreshing..." : "Refresh Data"}
-                </button>
-                <ExportButton onExport={exportActivity} label="Export activity" />
-                <ExportButton onExport={exportFigures} label="Export figures" />
-                <ExportButton onExport={exportCategories} label="Export categories" />
               </div>
             </div>
             <div className="mt-4">
@@ -181,12 +192,16 @@ export default function Home() {
 
         {/* Insights Panel */}
         {state.events.length > 0 && (
-          <InsightsPanel />
+          <div id="insights">
+            <InsightsPanel />
+          </div>
         )}
 
         {/* Bounce Warnings */}
         {state.events.length > 0 && (
-          <BounceWarnings events={filteredEvents} />
+          <div id="bounce-warnings">
+            <BounceWarnings events={filteredEvents} />
+          </div>
         )}
 
         {/* Compact Sticky Filter Bar */}
@@ -247,24 +262,45 @@ export default function Home() {
         )}
 
         <section className="grid gap-6">
-          <MetricsPanel metrics={metrics} />
-          <StatsCharts data={timeseries} />
-          <FiguresTable
-            aggregates={figures}
-            granularity={granularity}
-            onGranularityChange={setGranularity}
-          />
-          <FunnelChart data={funnelStages} />
-          <EmailSequenceCard events={filteredEvents} dateRange={state.filters.dateRange} />
-          <ActivityFeed events={filteredEvents} onRequestExport={exportActivity} />
-          <CategoriesTable
-            categories={categoryAggregates}
-            onSortChange={(key) => setSortKey(key as CategoryMetricKey)}
-            activeSortKey={sortKey}
-          />
+          <div id="metrics">
+            <MetricsPanel metrics={metrics} />
+          </div>
+          <div id="charts">
+            <StatsCharts 
+              data={timeseries} 
+              granularity={chartGranularity}
+              onGranularityChange={setChartGranularity}
+              excludeWeekends={excludeWeekends}
+              onToggleWeekends={() => setExcludeWeekends(!excludeWeekends)}
+            />
+          </div>
+          <div id="figures">
+            <FiguresTable
+              aggregates={figures}
+              granularity={granularity}
+              onGranularityChange={setGranularity}
+            />
+          </div>
+          <div id="funnel">
+            <FunnelChart data={funnelStages} />
+          </div>
+          <div id="sequences">
+            <EmailSequenceCard events={filteredEvents} dateRange={state.filters.dateRange} />
+          </div>
+          <div id="activity">
+            <ActivityFeed events={filteredEvents} onRequestExport={exportActivity} />
+          </div>
+          <div id="categories">
+            <CategoriesTable
+              categories={categoryAggregates}
+              onSortChange={(key) => setSortKey(key as CategoryMetricKey)}
+              activeSortKey={sortKey}
+            />
+          </div>
         </section>
       </div>
     </DashboardShell>
+    </>
   );
 }
 

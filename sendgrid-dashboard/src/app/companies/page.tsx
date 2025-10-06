@@ -2,6 +2,8 @@
 
 import { useState, useMemo } from "react";
 import { DashboardShell } from "@/components/layout/DashboardShell";
+import { ScrollToTop } from "@/components/navigation/ScrollToTop";
+import { Sidebar } from "@/components/navigation/Sidebar";
 import { CompanyFiltersComponent, type CompanyFilters } from "@/components/analytics/AnalyticsFilters";
 import { DomainContactsModal } from "@/components/analytics/DomainContactsModal";
 import { useDomainMetrics } from "@/hooks/useDomainMetrics";
@@ -10,7 +12,7 @@ import { formatPercent, formatNumber } from "@/lib/format";
 import { TrendingUp, AlertTriangle, Download, Building2, AlertCircle } from "lucide-react";
 
 export default function CompaniesPage() {
-  const { data: allDomains, isLoading } = useDomainMetrics(undefined, 1);
+  const { data: allDomains, isLoading, summary, generatedAt } = useDomainMetrics(undefined, 1);
   const [filters, setFilters] = useState<CompanyFilters>({
     trend: 'all',
     minContacts: undefined,
@@ -106,28 +108,41 @@ export default function CompaniesPage() {
     exportWithContacts(coldDomains, `cold-domains-with-contacts-${new Date().toISOString().split('T')[0]}.csv`);
   };
 
+  const sections = [
+    { id: "filters", label: "Filters", icon: "filters" },
+    { id: "summary", label: "Summary", icon: "summary" },
+    { id: "hot-leads", label: "Hot Leads", icon: "hot-leads" },
+    { id: "warm-leads", label: "Warm Leads", icon: "warm-leads" },
+    { id: "at-risk", label: "At-Risk Domains", icon: "at-risk" },
+  ];
+
   return (
-    <DashboardShell
-      eventsCount={0}
-      lastUpdated={undefined}
-    >
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Company Analytics</h1>
-          <p className="mt-2 text-muted-foreground">
-            B2B lead generation insights based on domain-level engagement metrics
-          </p>
-        </div>
+    <>
+      <Sidebar sections={sections} />
+      <ScrollToTop />
+      <DashboardShell
+        eventsCount={summary?.total_domains ?? allDomains.length}
+        lastUpdated={generatedAt ?? (allDomains.length ? allDomains[0]?.last_activity : undefined)}
+      >
+        <div className="space-y-6">
+          <div>
+            <h1 className="text-3xl font-bold text-foreground">Company Analytics</h1>
+            <p className="mt-2 text-muted-foreground">
+              B2B lead generation insights based on domain-level engagement metrics
+            </p>
+          </div>
 
-        {/* Filters */}
-        <CompanyFiltersComponent
-          filters={filters}
-          onChange={setFilters}
-          onReset={handleResetFilters}
-        />
+          {/* Filters */}
+          <div id="filters">
+            <CompanyFiltersComponent
+              filters={filters}
+              onChange={setFilters}
+              onReset={handleResetFilters}
+            />
+          </div>
 
-        {/* Summary Cards */}
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {/* Summary Cards */}
+          <div id="summary" className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <div className="rounded-xl border border-border/50 bg-card/60 p-6 shadow-floating-card">
             <div className="flex items-center gap-2 text-muted-foreground mb-2">
               <Building2 className="h-5 w-5" />
@@ -181,7 +196,7 @@ export default function CompaniesPage() {
         {/* Domain Insights Sections */}
         <div className="space-y-6">
           {/* Hot Leads */}
-          <section className="rounded-xl border border-border/50 bg-card/60 p-6 shadow-floating-card">
+          <section id="hot-leads" className="rounded-xl border border-border/50 bg-card/60 p-6 shadow-floating-card">
             <div className="mb-4 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <TrendingUp className="h-5 w-5 text-green-600" />
@@ -246,7 +261,7 @@ export default function CompaniesPage() {
           </section>
 
           {/* Warm Leads */}
-          <section className="rounded-xl border border-border/50 bg-card/60 p-6 shadow-floating-card">
+          <section id="warm-leads" className="rounded-xl border border-border/50 bg-card/60 p-6 shadow-floating-card">
             <div className="mb-4 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <TrendingUp className="h-5 w-5 text-yellow-600" />
@@ -368,7 +383,7 @@ export default function CompaniesPage() {
           </section>
 
           {/* At-Risk Domains */}
-          <section className="rounded-xl border border-border/50 bg-card/60 p-6 shadow-floating-card">
+          <section id="at-risk" className="rounded-xl border border-border/50 bg-card/60 p-6 shadow-floating-card">
             <div className="mb-4 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <AlertTriangle className="h-5 w-5 text-red-600" />
@@ -432,14 +447,14 @@ export default function CompaniesPage() {
         </div>
       </div>
 
-      {/* Domain Contacts Modal */}
-      {selectedDomain && (
-        <DomainContactsModal
-          domain={selectedDomain}
-          isOpen={isModalOpen}
-          onClose={handleCloseModal}
+      {isModalOpen && (
+        <DomainContactsModal 
+          isOpen={isModalOpen} 
+          onClose={handleCloseModal} 
+          domain={selectedDomain || ''} 
         />
       )}
     </DashboardShell>
+    </>
   );
 }

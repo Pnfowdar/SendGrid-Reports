@@ -26,7 +26,7 @@
 
 ## Summary
 
-**Objective**: Transform SendGrid Dashboard from basic reporting to lead generation powerhouse with actionable analytics.
+**Objective**: Transform SendGrid Dashboard from basic reporting to lead generation powerhouse with actionable analytics. Includes UX enhancements: 30-day rolling context window, enhanced cross-table metrics, header reorganization, scroll navigation improvements, and data persistence across routes.
 
 **Selected Implementation Approach**:
 - **1.1 Date Migration**: Option A - Complete Luxon→date-fns migration (removes 50KB)
@@ -44,6 +44,11 @@
 3. Company-level engagement trends (B2B lead qualification)
 4. One-click CSV exports for CRM import
 5. URL sharing for team collaboration
+6. 30-day rolling context window for accurate sequence analysis
+7. Cross-table metrics (Opens in Click Rate table, Clicks in Open Rate table)
+8. Streamlined header with event count, last updated, sign out, and refresh controls
+9. Hamburger menu for quick section navigation
+10. Smart data persistence (12-hour auto-refresh cycle)
 
 **Bundle Impact**: +15KB new features, -50KB Luxon removal = **Net -35KB**
 
@@ -77,12 +82,16 @@
 - Supabase free tier: 500MB database, 2GB bandwidth/month
 - No additional backend services (serverless only)
 - Autonomous execution (minimal user intervention)
+- 30-day rolling window must not degrade filter performance (<200ms)
+- Data persistence must use efficient caching strategy (sessionStorage + timestamp)
 
 **Scale/Scope**: 
 - Support 100k+ email events in database
 - 10k events loaded in client for real-time filtering
+- 30-day rolling window calculations on filtered datasets
 - 8 new components + 4 API endpoints
-- 12 existing files to modify
+- 18 existing files to modify (includes UX enhancements)
+- 5 new utility functions for rolling window context
 
 ## Constitution Check
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
@@ -169,6 +178,21 @@ sendgrid-dashboard/
 
 **Structure Decision**: Single Next.js application with Supabase backend. All analytics built on existing foundation. New features co-located with existing components.
 
+### New Files for UX Enhancements
+```
+sendgrid-dashboard/
+├── src/
+│   ├── components/
+│   │   ├── navigation/
+│   │   │   ├── HamburgerMenu.tsx          # [NEW] Section navigation
+│   │   │   └── ScrollToTop.tsx            # [NEW] Scroll to top button
+│   ├── contexts/
+│   │   └── DataCacheContext.tsx           # [NEW] Global data cache
+│   ├── lib/
+│   │   ├── context-window.ts              # [NEW] 30-day rolling window utils
+│   │   └── data-cache.ts                  # [NEW] Data persistence logic
+```
+
 ## Phase 0: Outline & Research
 
 **Research Topics**:
@@ -182,6 +206,21 @@ sendgrid-dashboard/
 - Test timezone handling (Australia/Brisbane)
 
 **Expected Decision**: Direct replacement with `date-fns` + `date-fns-tz` for timezone support
+
+### 1A. 30-Day Rolling Context Window
+**Question**: How to efficiently calculate metrics using 30-day context while respecting date range filters?
+
+**Research Approach**:
+- Design dual-dataset approach: filtered for display, 30-day for context
+- Determine performance impact of calculating on 30-day window
+- Test with email sequences (3-day cadence simulation)
+
+**Decision (Clarified 2025-10-06)**: 
+- **Option C Selected**: Split view approach - Display counts from filtered dates, but calculate rates/percentages based on 30-day context window
+- Context window = 30 days PRIOR to filter start date + filtered period
+- Calculate context metrics once, persist to sessionStorage until next refresh
+- Add tooltips explaining context-based calculations
+- Apply to: Email Sequences, Open Rate, Click Rate, Bounce Rate calculations
 
 ### 2. Supabase Schema Enhancement
 **Question**: How to add `email_domain` computed column using Supabase MCP?
@@ -223,6 +262,21 @@ sendgrid-dashboard/
 
 **Expected Decision**: Comma-separated with URL encoding, truncate+warn if >1800 chars
 
+### 5A. Data Persistence Strategy
+**Question**: How to prevent data reloading on Dashboard navigation while supporting 12-hour auto-refresh?
+
+**Research Approach**:
+- Compare sessionStorage vs. in-memory state persistence
+- Design timestamp-based staleness check (12-hour threshold)
+- Handle navigation between Dashboard/Individuals/Companies routes
+
+**Decision (Clarified 2025-10-06)**:
+- **Option A with incremental fetch**: "Refresh Data" always fetches new data but uses incremental approach
+- On refresh: Query for events WHERE unique_id > lastUniqueId (append new rows only)
+- Reset 12-hour timer on manual refresh
+- Persist both full dataset and lastUniqueId in sessionStorage
+- Auto-fetch on mount only if cache missing or >12 hours stale
+
 ### 6. Domain-Level Aggregation Performance
 **Question**: Can we aggregate 100k events by domain in <500ms server-side?
 
@@ -232,6 +286,36 @@ sendgrid-dashboard/
 - Compare server-side vs client-side performance
 
 **Expected Decision**: Server-side with indexes, cache results for 5 minutes
+
+### 7. Cross-Table Metric Enhancement
+**Question**: How to add Opens/Clicks to existing rate tables without breaking layout?
+
+**Research Approach**:
+- Review existing table components (Open Rate, Click Rate, Top Engaged)
+- Design responsive column layout for additional metrics
+- Ensure tables remain readable on mobile devices
+
+**Decision (Clarified 2025-10-06)**:
+- **Option B with responsive sizing**: Horizontal scroll to preserve all columns
+- Implement responsive column widths that shrink on smaller screens
+- Min column widths to prevent crushing, horizontal scroll kicks in when needed
+- Keep all columns visible (no hiding), better UX than collapsing
+- Apply to: Top Openers (+Clicks, Click Rate), Top Clickers (+Opens, Open Rate), Top Engaged (all metrics)
+
+### 8. Navigation UX Improvements
+**Question**: What's the best approach for hamburger menu, scroll-to-top, and header reorganization?
+
+**Research Approach**:
+- Survey common dashboard navigation patterns
+- Design section anchor system for smooth scrolling
+- Test scroll-to-top trigger threshold (pixels from top)
+
+**Decision (Clarified 2025-10-06)**:
+- **Option A for hamburger**: Fixed top-left corner, separate from header navigation
+- Scroll-to-top button: Bottom-right, appears after 400px scroll
+- Header consolidation: Move event count, last updated, refresh, sign out to top-right
+- Section anchors with smooth scroll on all pages
+- No performance fallback needed - accept calculation time as-is
 
 **Output**: `research-lead-gen.md` documenting all decisions and rationales
 
@@ -303,6 +387,28 @@ interface DashboardFilters {
   categories: string[];        // Changed from string
   emails: string[];             // Changed from string (support multiple)
   eventTypes: EventType[];      // Changed from EventType
+}
+
+// 30-day context window
+interface ContextWindow {
+  startDate: Date;
+  endDate: Date;
+  events: EmailEvent[];
+}
+
+// Data cache for persistence
+interface DataCache {
+  events: EmailEvent[];
+  loadedAt: Date;
+  lastUniqueId: number | null;
+}
+
+// Navigation section for hamburger menu
+interface NavigationSection {
+  id: string;
+  label: string;
+  icon?: React.ComponentType;
+  enabled: boolean;
 }
 ```
 

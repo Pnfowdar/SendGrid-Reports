@@ -4,6 +4,10 @@ import { useMemo } from "react";
 import { BarChart3 } from "lucide-react";
 import type { DailyAggregate } from "@/types";
 import { formatNumber, formatDate } from "@/lib/format";
+import { startOfWeek, endOfWeek } from "date-fns";
+import { formatInTimeZone } from "date-fns-tz";
+
+const TIMEZONE = "Australia/Brisbane";
 
 interface FiguresTableProps {
   aggregates: DailyAggregate[];
@@ -34,6 +38,21 @@ export function FiguresTable({ aggregates, granularity, onGranularityChange, isL
       ...aggregate,
     }));
   }, [aggregates]);
+
+  const formatDateLabel = (dateStr: string, gran: "daily" | "weekly" | "monthly"): string => {
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return dateStr;
+
+    if (gran === "weekly") {
+      const start = startOfWeek(date, { weekStartsOn: 1 });
+      const end = endOfWeek(date, { weekStartsOn: 1 });
+      return `${formatInTimeZone(start, TIMEZONE, "dd LLL")} – ${formatInTimeZone(end, TIMEZONE, "dd LLL yyyy")}`;
+    }
+    if (gran === "monthly") {
+      return formatInTimeZone(date, TIMEZONE, "LLLL yyyy");
+    }
+    return formatDate(dateStr);
+  };
 
   return (
     <section
@@ -115,7 +134,7 @@ export function FiguresTable({ aggregates, granularity, onGranularityChange, isL
             ) : (
               rows.map((row) => (
                 <tr key={row.key} className="border-b border-border/20 last:border-0">
-                  <td className="px-4 py-3 text-xs text-muted-foreground">{formatDate(row.date)}</td>
+                  <td className="px-4 py-3 text-xs text-muted-foreground">{formatDateLabel(row.date, granularity)}</td>
                   {COLUMNS.map((column) => (
                     <td key={column.key} className="px-4 py-3 text-right font-medium">
                       {formatNumber(Number(row[column.key] ?? 0))}

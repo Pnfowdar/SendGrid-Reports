@@ -68,8 +68,8 @@ export function DomainContactsModal({ domain, isOpen, onClose }: DomainContactsM
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-      <div className="relative w-full max-w-4xl max-h-[90vh] bg-card rounded-xl border border-border shadow-2xl flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur">
+      <div className="relative w-full max-w-4xl max-h-[90vh] bg-slate-900/95 rounded-xl border border-white/10 shadow-2xl flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-border p-6">
           <div className="flex items-center gap-3">

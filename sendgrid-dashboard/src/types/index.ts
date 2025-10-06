@@ -159,3 +159,68 @@ export interface SmartInsight {
     end: Date;
   };
 }
+
+// ===== UX ENHANCEMENT TYPES (T009 - Added 2025-10-06) =====
+
+// 30-day context window
+export interface ContextWindow {
+  startDate: Date;
+  endDate: Date;
+  events: EmailEvent[];
+}
+
+// Data cache for persistence
+export interface DataCache {
+  version: string;
+  events: EmailEvent[];
+  loadedAt: string; // ISO timestamp
+  lastUniqueId: number | null;
+}
+
+// Cached context metrics
+export interface CachedContextMetrics {
+  version: string;
+  dateRangeKey: string; // hash of date range for cache invalidation
+  metrics: {
+    open_rate: number;
+    click_rate: number;
+    bounce_rate: number;
+    sequence_analysis?: SequenceAnalysisSnapshot;
+  };
+  calculatedAt: string; // ISO timestamp
+}
+
+// Navigation section for hamburger menu
+export interface NavigationSection {
+  id: string;
+  label: string;
+  icon?: string;
+}
+
+export interface SequenceAnalysisSnapshot {
+  totalEmails: number;
+  uniqueRecipients: number;
+  averageSequenceDepth: number;
+  metrics: Array<{
+    sequenceNumber: number;
+    totalSent: number;
+    openRate: number;
+    clickRate: number;
+  }>;
+}
+
+export interface EngagementSummary {
+  total_contacts: number;
+  avg_engagement_score: number;
+  high_value_count: number;
+  warm_count: number;
+  cold_count: number;
+}
+
+export interface DomainSummary {
+  total_domains: number;
+  hot_leads: number;
+  warm_leads: number;
+  at_risk: number;
+  total_contacts_covered: number;
+}
