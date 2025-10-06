@@ -3,7 +3,6 @@
 import { useMemo, useState, useEffect, useRef, useCallback } from "react";
 import type { ChangeEvent } from "react";
 import { X, RefreshCw } from "lucide-react";
-import { formatInTimeZone } from "date-fns-tz";
 import { FilterBar, DateRangePicker } from "@/components/filters/FilterBar";
 import type { EventType } from "@/types";
 import { MetricsPanel } from "@/components/metrics-panel/MetricsPanel";
@@ -284,9 +283,4 @@ export default function Home() {
     </DashboardShell>
     </>
   );
-}
-
-function createFilename(prefix: string): string {
-  const now = formatInTimeZone(new Date(), "Australia/Brisbane", "yyyyMMdd-HHmmss");
-  return `${prefix}-${now}.csv`;
 }

@@ -12,7 +12,7 @@ import {
   YAxis,
 } from "recharts";
 import { useMemo, useState } from "react";
-import { format, startOfWeek, endOfWeek } from "date-fns";
+import { startOfWeek, endOfWeek } from "date-fns";
 import { formatDate } from "@/lib/format";
 import { formatInTimeZone } from "date-fns-tz";
 import { Eye, EyeOff } from "lucide-react";
@@ -84,10 +84,12 @@ export function StatsCharts({
     return dataPoints.map((_, i) => slope * i + intercept);
   };
 
-  const trendlineData = useMemo(() => {
+  type TrendlineSeries = Record<string, number[]>;
+
+  const trendlineData = useMemo<TrendlineSeries>(() => {
     if (!showTrendlines) return {};
     
-    const trends: Record<string, number[]> = {};
+    const trends: TrendlineSeries = {};
     METRIC_OPTIONS.forEach(({ key }) => {
       if (activeMetrics.has(key)) {
         const values = chartData.map(d => d[key] as number);
@@ -99,11 +101,11 @@ export function StatsCharts({
 
   const enrichedChartData = useMemo(() => {
     return chartData.map((point, index) => {
-      const enriched: any = { ...point };
-      Object.keys(trendlineData).forEach(key => {
-        enriched[key] = trendlineData[key][index];
+      const trendValues: Partial<Record<string, number>> = {};
+      Object.entries(trendlineData).forEach(([key, values]) => {
+        trendValues[key] = values[index] ?? 0;
       });
-      return enriched;
+      return { ...point, ...trendValues } as TimeseriesPoint & Partial<Record<string, number>>;
     });
   }, [chartData, trendlineData]);
 
