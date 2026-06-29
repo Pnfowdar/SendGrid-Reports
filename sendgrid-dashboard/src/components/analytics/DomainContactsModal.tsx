@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { X, Download, Mail } from "lucide-react";
 import { formatNumber, formatPercent } from "@/lib/format";
 import { downloadCsv } from "@/lib/export";
@@ -17,14 +17,7 @@ export function DomainContactsModal({ domain, isOpen, onClose }: DomainContactsM
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (isOpen && domain) {
-      fetchDomainContacts();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, domain]);
-
-  const fetchDomainContacts = async () => {
+  const fetchDomainContacts = useCallback(async () => {
     setIsLoading(true);
     setError(null);
     try {
@@ -42,7 +35,15 @@ export function DomainContactsModal({ domain, isOpen, onClose }: DomainContactsM
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [domain]);
+
+  useEffect(() => {
+    if (isOpen && domain) {
+      // ponytail: modal fetch belongs in this effect; move to a query library if data loading grows.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      void fetchDomainContacts();
+    }
+  }, [domain, fetchDomainContacts, isOpen]);
 
   const exportContacts = () => {
     downloadCsv(`${domain}-contacts-${new Date().toISOString().split('T')[0]}.csv`, [

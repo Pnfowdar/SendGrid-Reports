@@ -168,15 +168,12 @@ export function DateRangePicker({ value, disabled, onChange }: DateRangePickerPr
   const [visibleMonth, setVisibleMonth] = useState<Date>(() => value[0] ?? value[1] ?? new Date());
   const containerRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
-  const [portalReady, setPortalReady] = useState(false);
   const [panelPosition, setPanelPosition] = useState({ left: 0, top: 0, width: 320 });
   const today = useMemo(() => startOfDay(new Date()), []);
+  const portalReady = typeof document !== "undefined";
 
   useEffect(() => {
-    setPortalReady(true);
-  }, []);
-
-  useEffect(() => {
+    if (!open) return;
 
     const updatePosition = () => {
       if (!containerRef.current) return;
@@ -218,12 +215,12 @@ export function DateRangePicker({ value, disabled, onChange }: DateRangePickerPr
     };
   }, [open]);
 
-  useEffect(() => {
+  const handleToggle = () => {
     if (!open) {
-      const next = value[0] ?? value[1] ?? new Date();
-      setVisibleMonth(next);
+      setVisibleMonth(value[0] ?? value[1] ?? new Date());
     }
-  }, [open, value]);
+    setOpen((prev) => !prev);
+  };
 
   const days = useMemo(() => {
     const start = startOfWeek(startOfMonth(visibleMonth), { weekStartsOn: 1 });
@@ -270,7 +267,7 @@ export function DateRangePicker({ value, disabled, onChange }: DateRangePickerPr
     <div className="relative" ref={containerRef}>
       <button
         type="button"
-        onClick={() => setOpen((prev) => !prev)}
+        onClick={handleToggle}
         disabled={disabled}
         className={cn(
           "flex w-full items-center justify-between rounded-lg border border-border/60 bg-card/80 px-3 py-2 text-left text-sm text-foreground shadow-inner transition hover:border-primary focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",

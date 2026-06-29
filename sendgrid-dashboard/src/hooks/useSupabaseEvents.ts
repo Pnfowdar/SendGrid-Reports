@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { EmailEvent } from "@/types";
 import { 
   saveDataCache, 
@@ -23,7 +23,7 @@ export function useSupabaseEvents(
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastUniqueId, setLastUniqueId] = useState<number | null>(null);
-  const [cacheChecked, setCacheChecked] = useState(false);
+  const cacheChecked = useRef(false);
 
   const loadData = useCallback(async () => {
     setIsLoading(true);
@@ -121,23 +121,23 @@ export function useSupabaseEvents(
 
   // Auto-load on mount (check cache first)
   useEffect(() => {
-    if (cacheChecked) return;
-    
-    setCacheChecked(true);
+    if (cacheChecked.current) return;
+    cacheChecked.current = true;
     
     // Try to load from cache
     const cache = loadDataCache();
     
     if (cache && !isCacheStale(cache.loadedAt, 12)) {
       // Cache is valid, use it
+      // ponytail: sessionStorage hydration belongs here; useSyncExternalStore if more stores appear.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setLastUniqueId(cache.lastUniqueId);
       onDataLoaded(cache.events, new Date(cache.loadedAt));
     } else {
       // Cache missing or stale, fetch fresh data
       loadData();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cacheChecked]);
+  }, [loadData, onDataLoaded]);
 
   return {
     isLoading,
