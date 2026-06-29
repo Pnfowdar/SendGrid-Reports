@@ -6,6 +6,7 @@ import {
 } from "@/lib/supabase";
 
 export const dynamic = "force-dynamic";
+const INITIAL_LOAD_DAYS = 30;
 
 export async function GET(request: NextRequest) {
   try {
@@ -14,9 +15,9 @@ export async function GET(request: NextRequest) {
 
     const supabase = createServerSupabaseClient();
     
-    // Determine date filter for initial load
-    const oneYearAgo = new Date();
-    oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+    // ponytail: fixed 30-day initial load; add date-range backfill if first view needs older data.
+    const initialLoadStart = new Date();
+    initialLoadStart.setDate(initialLoadStart.getDate() - INITIAL_LOAD_DAYS);
     
     const allData: SupabaseEmailEvent[] = [];
     let lastFetchedId = afterId ? parseInt(afterId, 10) : 0;
@@ -30,7 +31,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    console.log(`[API] Starting fetch - afterId: ${afterId || 'none'}, date filter: ${afterId ? 'none' : oneYearAgo.toISOString()}`);
+    console.log(`[API] Starting fetch - afterId: ${afterId || 'none'}, date filter: ${afterId ? 'none' : initialLoadStart.toISOString()}`);
 
     // Fetch all records in batches
     while (hasMore) {
@@ -44,8 +45,7 @@ export async function GET(request: NextRequest) {
         // Incremental refresh: fetch only records after the given unique_id
         query = query.gt("Unique ID", lastFetchedId);
       } else {
-        // Initial load: fetch last 365 days
-        query = query.gte("Timestamp", oneYearAgo.toISOString());
+        query = query.gte("Timestamp", initialLoadStart.toISOString());
         if (lastFetchedId > 0) {
           query = query.gt("Unique ID", lastFetchedId);
         }

@@ -2,7 +2,7 @@ import type { DataCache, CachedContextMetrics } from "@/types";
 
 const CACHE_KEY = "sendgrid_data_cache";
 const CONTEXT_CACHE_KEY = "sendgrid_context_cache";
-const CACHE_VERSION = "v1";
+const CACHE_VERSION = "v2";
 
 /**
  * Save events data to sessionStorage
