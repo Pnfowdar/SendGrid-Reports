@@ -1,8 +1,5 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE!;
+import { createServerSupabaseClient } from "@/lib/supabase";
 
 interface SupabaseEvent {
   Email: string;
@@ -29,7 +26,7 @@ export async function GET(request: Request) {
     const minContacts = parseInt(searchParams.get('minContacts') || '3');
     const limit = parseInt(searchParams.get('limit') || '100');
     
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    const supabase = createServerSupabaseClient();
     
     const { data: events, error } = await supabase
       .from('SendGrid_Log_Data')

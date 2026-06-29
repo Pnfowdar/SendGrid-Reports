@@ -1,6 +1,6 @@
-import type { CategoryAggregate, DailyAggregate, EmailEvent, EngagementContact, DomainMetrics, BounceWarning } from "@/types";
+import type { EngagementContact } from "@/types";
 
-function createCsvRow(columns: (string | number | null | undefined)[]): string {
+export function createCsvRow(columns: (string | number | null | undefined)[]): string {
   return columns
     .map((value) => {
       if (value === null || value === undefined) {
@@ -15,7 +15,8 @@ function createCsvRow(columns: (string | number | null | undefined)[]): string {
     .join(",");
 }
 
-function downloadFile(filename: string, contents: string) {
+export function downloadCsv(filename: string, rows: (string | number | null | undefined)[][]) {
+  const contents = rows.map(createCsvRow).join("\n");
   const blob = new Blob([contents], { type: "text/csv;charset=utf-8" });
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
@@ -27,117 +28,24 @@ function downloadFile(filename: string, contents: string) {
   URL.revokeObjectURL(url);
 }
 
-export function exportActivityCsv(events: EmailEvent[], filename: string) {
-  const header = createCsvRow([
-    "timestamp",
-    "email",
-    "event",
-    "smtp_id",
-    "categories",
-    "email_account_id",
-    "sg_event_id",
-  ]);
-
-  const rows = events.map((event) =>
-    createCsvRow([
-      event.timestamp.toISOString(),
-      event.email,
-      event.event,
-      event.smtp_id,
-      event.category.join("|") || "Uncategorized",
-      event.email_account_id ?? "",
-      event.sg_event_id,
-    ])
-  );
-
-  downloadFile(filename, [header, ...rows].join("\n"));
-}
-
-export function exportFiguresCsv(aggregates: DailyAggregate[], filename: string) {
-  const header = createCsvRow([
-    "date",
-    "requests",
-    "delivered",
-    "opens",
-    "unique_opens",
-    "clicks",
-    "unique_clicks",
-    "unsubscribes",
-    "bounces",
-    "spam_reports",
-    "blocks",
-    "bounce_drops",
-    "spam_drops",
-  ]);
-
-  const rows = aggregates.map((aggregate) =>
-    createCsvRow([
-      aggregate.date,
-      aggregate.requests,
-      aggregate.delivered,
-      aggregate.opens,
-      aggregate.unique_opens,
-      aggregate.clicks,
-      aggregate.unique_clicks,
-      aggregate.unsubscribes,
-      aggregate.bounces,
-      aggregate.spam_reports,
-      aggregate.blocks,
-      aggregate.bounce_drops,
-      aggregate.spam_drops,
-    ])
-  );
-
-  downloadFile(filename, [header, ...rows].join("\n"));
-}
-
-export function exportCategoriesCsv(categories: CategoryAggregate[], filename: string) {
-  const header = createCsvRow([
-    "category",
-    "delivered",
-    "unique_opens",
-    "unique_clicks",
-    "unsubscribes",
-    "spam_reports",
-    "open_rate",
-    "click_rate",
-  ]);
-
-  const rows = categories.map((category) =>
-    createCsvRow([
-      category.category,
-      category.delivered,
-      category.unique_opens,
-      category.unique_clicks,
-      category.unsubscribes,
-      category.spam_reports,
-      category.open_rate.toFixed(2),
-      category.click_rate.toFixed(2),
-    ])
-  );
-
-  downloadFile(filename, [header, ...rows].join("\n"));
-}
-
 export function exportEngagementCsv(contacts: EngagementContact[], filename: string) {
-  const header = createCsvRow([
-    "email",
-    "domain",
-    "total_sent",
-    "opens",
-    "clicks",
-    "bounces",
-    "open_rate",
-    "click_rate",
-    "bounce_rate",
-    "engagement_score",
-    "tier",
-    "last_activity",
-    "days_since_last_activity",
-  ]);
-
-  const rows = contacts.map((contact) =>
-    createCsvRow([
+  downloadCsv(filename, [
+    [
+      "email",
+      "domain",
+      "total_sent",
+      "opens",
+      "clicks",
+      "bounces",
+      "open_rate",
+      "click_rate",
+      "bounce_rate",
+      "engagement_score",
+      "tier",
+      "last_activity",
+      "days_since_last_activity",
+    ],
+    ...contacts.map((contact) => [
       contact.email,
       contact.domain,
       contact.total_sent,
@@ -151,74 +59,6 @@ export function exportEngagementCsv(contacts: EngagementContact[], filename: str
       contact.tier,
       contact.last_activity.toISOString(),
       contact.days_since_last_activity,
-    ])
-  );
-
-  downloadFile(filename, [header, ...rows].join("\n"));
-}
-
-export function exportBounceCsv(warnings: BounceWarning[], filename: string) {
-  const header = createCsvRow([
-    "email",
-    "domain",
-    "bounce_count",
-    "severity",
-    "action_required",
-    "first_bounce",
-    "last_bounce",
+    ]),
   ]);
-
-  const rows = warnings.map((warning) =>
-    createCsvRow([
-      warning.email,
-      warning.domain,
-      warning.bounce_count,
-      warning.severity,
-      warning.action_required,
-      warning.first_bounce.toISOString(),
-      warning.last_bounce.toISOString(),
-    ])
-  );
-
-  downloadFile(filename, [header, ...rows].join("\n"));
-}
-
-export function exportDomainCsv(domains: DomainMetrics[], filename: string) {
-  const header = createCsvRow([
-    "domain",
-    "unique_contacts",
-    "top_contacts",
-    "total_sent",
-    "total_opens",
-    "total_clicks",
-    "total_bounces",
-    "avg_open_rate",
-    "avg_click_rate",
-    "bounce_rate",
-    "engagement_score",
-    "trend",
-    "first_contact",
-    "last_activity",
-  ]);
-
-  const rows = domains.map((domain) =>
-    createCsvRow([
-      domain.domain,
-      domain.unique_contacts,
-      domain.top_contacts.join("; "),
-      domain.total_sent,
-      domain.total_opens,
-      domain.total_clicks,
-      domain.total_bounces,
-      domain.avg_open_rate.toFixed(1),
-      domain.avg_click_rate.toFixed(1),
-      domain.bounce_rate.toFixed(1),
-      domain.engagement_score ? Math.round(domain.engagement_score) : "",
-      domain.trend,
-      domain.first_contact.toISOString(),
-      domain.last_activity.toISOString(),
-    ])
-  );
-
-  downloadFile(filename, [header, ...rows].join("\n"));
 }

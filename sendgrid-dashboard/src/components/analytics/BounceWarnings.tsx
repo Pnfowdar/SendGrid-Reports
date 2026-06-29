@@ -5,6 +5,7 @@ import { detectBounces } from "@/lib/bounce-detection";
 import type { EmailEvent } from "@/types";
 import { AlertTriangle, AlertCircle, Download } from "lucide-react";
 import { formatDate } from "@/lib/format";
+import { downloadCsv } from "@/lib/export";
 
 interface BounceWarningsProps {
   events: EmailEvent[];
@@ -17,25 +18,18 @@ export function BounceWarnings({ events }: BounceWarningsProps) {
   const warning = warnings.filter(w => w.severity === 'warning');
 
   const exportSuppressionList = () => {
-    const headers = ['Email', 'Domain', 'Bounce Count', 'Severity', 'Action Required', 'First Bounce', 'Last Bounce'];
-    const rows = warnings.map(w => [
-      w.email,
-      w.domain,
-      w.bounce_count,
-      w.severity,
-      w.action_required,
-      formatDate(w.first_bounce),
-      formatDate(w.last_bounce)
+    downloadCsv(`bounce-suppression-list-${new Date().toISOString().split('T')[0]}.csv`, [
+      ['Email', 'Domain', 'Bounce Count', 'Severity', 'Action Required', 'First Bounce', 'Last Bounce'],
+      ...warnings.map(w => [
+        w.email,
+        w.domain,
+        w.bounce_count,
+        w.severity,
+        w.action_required,
+        formatDate(w.first_bounce),
+        formatDate(w.last_bounce)
+      ]),
     ]);
-    
-    const csv = [headers, ...rows].map(row => row.join(',')).join('\n');
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `bounce-suppression-list-${new Date().toISOString().split('T')[0]}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
   };
 
   if (warnings.length === 0) {

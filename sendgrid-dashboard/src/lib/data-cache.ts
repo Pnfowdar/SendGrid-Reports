@@ -1,7 +1,6 @@
-import type { DataCache, CachedContextMetrics } from "@/types";
+import type { DataCache } from "@/types";
 
 const CACHE_KEY = "sendgrid_data_cache";
-const CONTEXT_CACHE_KEY = "sendgrid_context_cache";
 const CACHE_VERSION = "v2";
 
 /**
@@ -58,54 +57,4 @@ export function isCacheStale(loadedAt: string, maxAgeHours: number = 12): boolea
  */
 export function clearDataCache(): void {
   sessionStorage.removeItem(CACHE_KEY);
-  sessionStorage.removeItem(CONTEXT_CACHE_KEY);
-}
-
-/**
- * Save calculated 30-day context metrics
- */
-export function save30DayContext(
-  dateRangeKey: string,
-  metrics: CachedContextMetrics["metrics"]
-): void {
-  try {
-    const cache: CachedContextMetrics = {
-      version: CACHE_VERSION,
-      dateRangeKey,
-      metrics,
-      calculatedAt: new Date().toISOString(),
-    };
-    sessionStorage.setItem(CONTEXT_CACHE_KEY, JSON.stringify(cache));
-  } catch (err) {
-    console.warn("Failed to save context cache:", err);
-  }
-}
-
-/**
- * Load calculated 30-day context metrics
- */
-export function load30DayContext(dateRangeKey: string): CachedContextMetrics["metrics"] | null {
-  try {
-    const cached = sessionStorage.getItem(CONTEXT_CACHE_KEY);
-    if (!cached) return null;
-    
-    const data: CachedContextMetrics = JSON.parse(cached);
-    
-    // Check version and key match
-    if (data.version !== CACHE_VERSION || data.dateRangeKey !== dateRangeKey) {
-      return null;
-    }
-    
-    return data.metrics;
-  } catch (err) {
-    console.warn("Failed to load context cache:", err);
-    return null;
-  }
-}
-
-/**
- * Clear context cache
- */
-export function clear30DayContext(): void {
-  sessionStorage.removeItem(CONTEXT_CACHE_KEY);
 }

@@ -7,7 +7,7 @@ import { Sidebar } from "@/components/navigation/Sidebar";
 import { CompanyFiltersComponent, type CompanyFilters } from "@/components/analytics/AnalyticsFilters";
 import { DomainContactsModal } from "@/components/analytics/DomainContactsModal";
 import { useDomainMetrics } from "@/hooks/useDomainMetrics";
-// import { exportDomainCsv } from "@/lib/export"; // Not used - using custom export with contacts
+import { downloadCsv } from "@/lib/export";
 import { formatPercent, formatNumber } from "@/lib/format";
 import { TrendingUp, AlertTriangle, Download, Building2, AlertCircle } from "lucide-react";
 
@@ -62,8 +62,9 @@ export default function CompaniesPage() {
     const allContacts = data.contacts || [];
 
     // Create enhanced CSV with all contacts per domain
-    const headers = ['Domain', 'Unique Contacts', 'Total Sent', 'Avg Open Rate', 'Avg Click Rate', 'Bounce Rate', 'Engagement Score', 'Trend', 'All Contact Emails'];
-    const rows = domains.map(domain => {
+    downloadCsv(filename, [
+      ['Domain', 'Unique Contacts', 'Total Sent', 'Avg Open Rate', 'Avg Click Rate', 'Bounce Rate', 'Engagement Score', 'Trend', 'All Contact Emails'],
+      ...domains.map(domain => {
       const domainContacts = allContacts
         .filter((c: { domain: string; email: string }) => c.domain === domain.domain)
         .map((c: { domain: string; email: string }) => c.email)
@@ -80,16 +81,8 @@ export default function CompaniesPage() {
         domain.trend,
         domainContacts
       ];
-    });
-
-    const csv = [headers, ...rows].map(row => row.join(',')).join('\n');
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    a.click();
-    URL.revokeObjectURL(url);
+    }),
+    ]);
   };
 
   const exportHotLeads = () => {

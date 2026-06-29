@@ -4,7 +4,6 @@ import {
   saveDataCache, 
   loadDataCache, 
   isCacheStale,
-  clear30DayContext 
 } from "@/lib/data-cache";
 
 interface UseSupabaseEventsResult {
@@ -108,9 +107,6 @@ export function useSupabaseEvents(
             lastUniqueId: data.lastUniqueId,
           });
         }
-        
-        // Clear context cache on refresh (recalculate with new data)
-        clear30DayContext();
         
         onDataAppended(newEvents, loadedAt);
       }

@@ -1,8 +1,5 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE!;
+import { createServerSupabaseClient } from "@/lib/supabase";
 
 interface SupabaseEvent {
   'Unique ID': number;
@@ -36,7 +33,7 @@ export async function GET(request: Request) {
     const limit = parseInt(searchParams.get('limit') || '50');
     const minScore = parseFloat(searchParams.get('minScore') || '0');
     
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    const supabase = createServerSupabaseClient();
     
     // Query for engagement metrics
     const { data: events, error } = await supabase

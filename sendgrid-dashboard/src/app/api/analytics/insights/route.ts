@@ -1,10 +1,7 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
 import { generateInsights } from "@/lib/insights";
+import { createServerSupabaseClient } from "@/lib/supabase";
 import type { EmailEvent, EventType } from "@/types";
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE!;
 
 interface SupabaseEvent {
   'Unique ID': number;
@@ -17,7 +14,7 @@ interface SupabaseEvent {
 
 export async function GET() {
   try {
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    const supabase = createServerSupabaseClient();
     
     // Fetch recent events for insights
     const { data: rawEvents, error } = await supabase

@@ -3,7 +3,6 @@
 import { TrendingUp, TrendingDown, Minus } from "lucide-react";
 import type { KPIMetrics } from "@/types";
 import { formatNumber, formatPercent, formatTrend } from "@/lib/format";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface MetricsPanelProps {
   metrics: KPIMetrics;
@@ -65,12 +64,15 @@ export function MetricsPanel({ metrics, comparison, isLoading }: MetricsPanelPro
         const value = metrics[key];
         const delta = deltaKey && comparison ? comparison[deltaKey] : undefined;
         return (
-          <Card key={key} padding="lg" className="relative overflow-hidden">
-            <CardHeader>
-              <CardTitle>{label}</CardTitle>
-              <CardDescription>{description}</CardDescription>
-            </CardHeader>
-            <CardContent className="mt-6 flex flex-col gap-3">
+          <article
+            key={key}
+            className="relative overflow-hidden rounded-xl border border-border/60 bg-card/80 p-8 shadow-floating-card supports-[backdrop-filter]:bg-card/70"
+          >
+            <div className="flex flex-col gap-1">
+              <h3 className="text-lg font-semibold tracking-tight text-card-foreground">{label}</h3>
+              <p className="text-sm text-muted-foreground">{description}</p>
+            </div>
+            <div className="mt-6 flex flex-col gap-3">
               <div className="text-3xl font-semibold text-card-foreground">
                 {isLoading ? (
                   <span className="animate-pulse text-muted-foreground">•••</span>
@@ -86,8 +88,8 @@ export function MetricsPanel({ metrics, comparison, isLoading }: MetricsPanelPro
                   </span>
                 </div>
               )}
-            </CardContent>
-          </Card>
+            </div>
+          </article>
         );
       })}
     </section>

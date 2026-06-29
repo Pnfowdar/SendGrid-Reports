@@ -2,6 +2,7 @@
 
 import type { EngagementContact } from "@/types";
 import { formatNumber, formatPercent } from "@/lib/format";
+import { exportEngagementCsv } from "@/lib/export";
 import { Download } from "lucide-react";
 
 interface EngagementTableProps {
@@ -12,40 +13,7 @@ interface EngagementTableProps {
 
 export function EngagementTable({ contacts, isLoading = false, error = null }: EngagementTableProps) {
   const exportCsv = () => {
-    const headers = [
-      'Email',
-      'Domain',
-      'Total Sent',
-      'Opens',
-      'Clicks',
-      'Open Rate',
-      'Click Rate',
-      'Engagement Score',
-      'Tier',
-      'Last Activity'
-    ];
-    
-    const rows = contacts.map(c => [
-      c.email,
-      c.domain,
-      c.total_sent,
-      c.opens,
-      c.clicks,
-      c.open_rate.toFixed(1),
-      c.click_rate.toFixed(1),
-      c.engagement_score,
-      c.tier,
-      c.last_activity.toISOString()
-    ]);
-    
-    const csv = [headers, ...rows].map(row => row.join(',')).join('\n');
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `hot-leads-${new Date().toISOString().split('T')[0]}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+    exportEngagementCsv(contacts, `hot-leads-${new Date().toISOString().split('T')[0]}.csv`);
   };
 
   if (error) {

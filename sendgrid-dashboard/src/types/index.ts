@@ -17,9 +17,6 @@ export interface EmailEvent {
   event: EventType;
   timestamp: Date;
   category: string[];
-  // Legacy fields (removed from new schema)
-  smtp_id?: string;
-  email_account_id?: string;
 }
 
 export interface DailyAggregate {
@@ -66,9 +63,9 @@ export interface FunnelStage {
 
 export interface DashboardFilters {
   dateRange: [Date | null, Date | null];
-  categories: string[];          // CHANGED: was string | undefined
-  emails: string[];              // CHANGED: was string | undefined, now array
-  eventTypes: EventType[];       // CHANGED: was EventType | "all" | undefined
+  categories: string[];
+  emails: string[];
+  eventTypes: EventType[];
 }
 
 export interface DashboardState {
@@ -78,15 +75,11 @@ export interface DashboardState {
 }
 
 export type DashboardAction =
-  | { type: "UPLOAD_DATA"; payload: { events: EmailEvent[]; uploadedAt: Date } }
   | { type: "LOAD_DATA"; payload: { events: EmailEvent[]; loadedAt: Date } }
   | { type: "APPEND_DATA"; payload: { events: EmailEvent[]; loadedAt: Date } }
   | { type: "SET_FILTERS"; payload: Partial<DashboardFilters> }
   | { type: "RESET" };
 
-// ===== NEW ANALYTICS TYPES (T009) =====
-
-// Engagement Analytics
 export interface EngagementContact {
   email: string;
   domain: string;
@@ -103,7 +96,6 @@ export interface EngagementContact {
   tier: 'hot' | 'warm' | 'cold';
 }
 
-// Domain Analytics
 export interface DomainMetrics {
   domain: string;
   unique_contacts: number;
@@ -121,7 +113,6 @@ export interface DomainMetrics {
   last_activity: Date;
 }
 
-// Bounce Warnings
 export interface BounceWarning {
   email: string;
   domain: string;
@@ -134,7 +125,6 @@ export interface BounceWarning {
   action_required: 'monitor' | 'suppress';
 }
 
-// Smart Insights
 export type InsightType = 'engagement' | 'bounce' | 'trend' | 'opportunity' | 'risk';
 export type InsightSeverity = 'info' | 'warning' | 'critical';
 
@@ -160,53 +150,11 @@ export interface SmartInsight {
   };
 }
 
-// ===== UX ENHANCEMENT TYPES (T009 - Added 2025-10-06) =====
-
-// 30-day context window
-export interface ContextWindow {
-  startDate: Date;
-  endDate: Date;
-  events: EmailEvent[];
-}
-
-// Data cache for persistence
 export interface DataCache {
   version: string;
   events: EmailEvent[];
   loadedAt: string; // ISO timestamp
   lastUniqueId: number | null;
-}
-
-// Cached context metrics
-export interface CachedContextMetrics {
-  version: string;
-  dateRangeKey: string; // hash of date range for cache invalidation
-  metrics: {
-    open_rate: number;
-    click_rate: number;
-    bounce_rate: number;
-    sequence_analysis?: SequenceAnalysisSnapshot;
-  };
-  calculatedAt: string; // ISO timestamp
-}
-
-// Navigation section for hamburger menu
-export interface NavigationSection {
-  id: string;
-  label: string;
-  icon?: string;
-}
-
-export interface SequenceAnalysisSnapshot {
-  totalEmails: number;
-  uniqueRecipients: number;
-  averageSequenceDepth: number;
-  metrics: Array<{
-    sequenceNumber: number;
-    totalSent: number;
-    openRate: number;
-    clickRate: number;
-  }>;
 }
 
 export interface EngagementSummary {

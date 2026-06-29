@@ -60,17 +60,6 @@ function normalizeEvents(events: EmailEvent[]): EmailEvent[] {
 
 function reducer(state: DashboardState, action: DashboardAction): DashboardState {
   switch (action.type) {
-    case "UPLOAD_DATA": {
-      const { events, uploadedAt } = action.payload;
-      const nextEvents = normalizeEvents(events);
-
-      return {
-        ...state,
-        events: nextEvents,
-        lastUpdated: uploadedAt,
-      } satisfies DashboardState;
-    }
-
     case "LOAD_DATA": {
       const { events, loadedAt } = action.payload;
       const nextEvents = normalizeEvents(events);

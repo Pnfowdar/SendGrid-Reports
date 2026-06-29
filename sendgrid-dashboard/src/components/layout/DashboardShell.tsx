@@ -100,7 +100,7 @@ export function DashboardShell({
                 SendGrid Deliverability & Engagement Dashboard
               </h1>
               <p className="mt-1 text-sm text-muted-foreground md:max-w-2xl">
-                Upload SendGrid Excel exports to explore deliverability, engagement, and category performance.
+                Explore Supabase-loaded SendGrid events, engagement, and category performance.
                 Filter by recipient, event type, and date range, then export insights for reporting.
               </p>
             </div>

@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { X, Download, Mail } from "lucide-react";
 import { formatNumber, formatPercent } from "@/lib/format";
+import { downloadCsv } from "@/lib/export";
 import type { EngagementContact } from "@/types";
 
 interface DomainContactsModalProps {
@@ -44,25 +45,18 @@ export function DomainContactsModal({ domain, isOpen, onClose }: DomainContactsM
   };
 
   const exportContacts = () => {
-    const headers = ['Email', 'Opens', 'Clicks', 'Open Rate', 'Click Rate', 'Engagement Score', 'Tier'];
-    const rows = contacts.map(c => [
-      c.email,
-      c.opens,
-      c.clicks,
-      c.open_rate.toFixed(1),
-      c.click_rate.toFixed(1),
-      Math.round(c.engagement_score),
-      c.tier
+    downloadCsv(`${domain}-contacts-${new Date().toISOString().split('T')[0]}.csv`, [
+      ['Email', 'Opens', 'Clicks', 'Open Rate', 'Click Rate', 'Engagement Score', 'Tier'],
+      ...contacts.map(c => [
+        c.email,
+        c.opens,
+        c.clicks,
+        c.open_rate.toFixed(1),
+        c.click_rate.toFixed(1),
+        Math.round(c.engagement_score),
+        c.tier
+      ]),
     ]);
-    
-    const csv = [headers, ...rows].map(row => row.join(',')).join('\n');
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${domain}-contacts-${new Date().toISOString().split('T')[0]}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
   };
 
   if (!isOpen) return null;
